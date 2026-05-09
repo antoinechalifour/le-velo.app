@@ -1,3 +1,9 @@
+import type { FeatureCollection } from 'geojson'
+import type {
+  BreakdownEntry,
+  Segment,
+} from './lib/segments'
+
 export type LngLat = {
   lng: number
   lat: number
@@ -13,7 +19,10 @@ export type RouteStats = {
 }
 
 export type RouteResult = {
-  geojson: GeoJSON.FeatureCollection
+  geojson: FeatureCollection
+  segmentsGeoJson: FeatureCollection
+  segments: Segment[]
+  breakdown: BreakdownEntry[]
   stats: RouteStats
   rawGpxUrl: string
 }

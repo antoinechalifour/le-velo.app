@@ -1,17 +1,23 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   Map as MapLibre,
   Marker,
   Source,
   Layer,
   type MapMouseEvent,
+  type MapRef,
 } from 'react-map-gl/maplibre'
+import type { ExpressionSpecification } from 'maplibre-gl'
+import type { FeatureCollection } from 'geojson'
 import type { LngLat } from '../types'
+import { CATEGORY_META, CATEGORY_ORDER } from '../lib/segments'
 
 type MapProps = {
   start: LngLat | null
   end: LngLat | null
-  routeGeoJson: GeoJSON.FeatureCollection | null
+  segmentsGeoJson: FeatureCollection | null
+  highlightedSegmentIdx: number | null
+  initialCenter: LngLat | null
   onMapClick: (lngLat: LngLat) => void
 }
 
@@ -41,7 +47,26 @@ const OSM_STYLE = {
   ],
 }
 
-export function Map({ start, end, routeGeoJson, onMapClick }: MapProps) {
+function buildCategoryColorExpression(): ExpressionSpecification {
+  const expr: unknown[] = ['match', ['get', 'category']]
+  for (const cat of CATEGORY_ORDER) {
+    expr.push(cat, CATEGORY_META[cat].color)
+  }
+  expr.push(CATEGORY_META.unknown.color)
+  return expr as ExpressionSpecification
+}
+
+export function Map({
+  start,
+  end,
+  segmentsGeoJson,
+  highlightedSegmentIdx,
+  initialCenter,
+  onMapClick,
+}: MapProps) {
+  const mapRef = useRef<MapRef | null>(null)
+  const hasFlownToUserRef = useRef(false)
+
   const handleClick = useCallback(
     (e: MapMouseEvent) => {
       onMapClick({ lng: e.lngLat.lng, lat: e.lngLat.lat })
@@ -49,8 +74,25 @@ export function Map({ start, end, routeGeoJson, onMapClick }: MapProps) {
     [onMapClick],
   )
 
+  const colorExpression = useMemo(() => buildCategoryColorExpression(), [])
+
+  useEffect(() => {
+    if (hasFlownToUserRef.current) return
+    if (!initialCenter) return
+    const map = mapRef.current
+    if (!map) return
+    hasFlownToUserRef.current = true
+    map.flyTo({
+      center: [initialCenter.lng, initialCenter.lat],
+      zoom: 12,
+      duration: 1500,
+      essential: true,
+    })
+  }, [initialCenter])
+
   return (
     <MapLibre
+      ref={mapRef}
       initialViewState={FRANCE_VIEW}
       mapStyle={OSM_STYLE}
       onClick={handleClick}
@@ -66,15 +108,15 @@ export function Map({ start, end, routeGeoJson, onMapClick }: MapProps) {
           <Pin color="#dc2626" label="B" />
         </Marker>
       )}
-      {routeGeoJson && (
-        <Source id="route" type="geojson" data={routeGeoJson}>
+      {segmentsGeoJson && segmentsGeoJson.features.length > 0 && (
+        <Source id="route" type="geojson" data={segmentsGeoJson}>
           <Layer
             id="route-casing"
             type="line"
             paint={{
-              'line-color': '#1e3a8a',
-              'line-width': 7,
-              'line-opacity': 0.9,
+              'line-color': '#0f172a',
+              'line-width': 8,
+              'line-opacity': 0.55,
             }}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
           />
@@ -82,11 +124,36 @@ export function Map({ start, end, routeGeoJson, onMapClick }: MapProps) {
             id="route-line"
             type="line"
             paint={{
-              'line-color': '#3b82f6',
-              'line-width': 4,
+              'line-color': colorExpression,
+              'line-width': 5,
             }}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
           />
+          {highlightedSegmentIdx !== null && (
+            <Layer
+              id="route-highlight"
+              type="line"
+              filter={['==', ['get', 'idx'], highlightedSegmentIdx]}
+              paint={{
+                'line-color': '#fff',
+                'line-width': 9,
+                'line-opacity': 1,
+              }}
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            />
+          )}
+          {highlightedSegmentIdx !== null && (
+            <Layer
+              id="route-highlight-fill"
+              type="line"
+              filter={['==', ['get', 'idx'], highlightedSegmentIdx]}
+              paint={{
+                'line-color': colorExpression,
+                'line-width': 5,
+              }}
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+            />
+          )}
         </Source>
       )}
     </MapLibre>

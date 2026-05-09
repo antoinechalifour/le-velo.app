@@ -1,4 +1,6 @@
+import type { FeatureCollection } from 'geojson'
 import type { LngLat, RouteResult, RouteStats } from '../types'
+import { buildSegments } from './segments'
 
 const BROUTER_BASE = 'https://brouter.de/brouter'
 
@@ -60,11 +62,15 @@ export async function fetchRoute(
     const text = await res.text()
     throw new Error(`BRouter ${res.status}: ${text.slice(0, 200)}`)
   }
-  const geojson = (await res.json()) as GeoJSON.FeatureCollection
+  const geojson = (await res.json()) as FeatureCollection
   const feature = geojson.features?.[0]
   const props = (feature?.properties ?? {}) as BrouterTrackProps
+  const { segments, segmentsGeoJson, breakdown } = buildSegments(geojson)
   return {
     geojson,
+    segmentsGeoJson,
+    segments,
+    breakdown,
     stats: parseStats(props),
     rawGpxUrl: buildBrouterUrl(start, end, profile, 'gpx'),
   }

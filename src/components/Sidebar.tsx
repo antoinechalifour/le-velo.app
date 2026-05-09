@@ -1,5 +1,10 @@
 import type { LngLat, RouteResult } from '../types'
 import { formatDistance, formatDuration, formatElevation } from '../lib/format'
+import {
+  CATEGORY_META,
+  type BreakdownEntry,
+  type Segment,
+} from '../lib/segments'
 
 type SidebarProps = {
   start: LngLat | null
@@ -7,6 +12,8 @@ type SidebarProps = {
   route: RouteResult | null
   isFetching: boolean
   error: Error | null
+  highlightedSegmentIdx: number | null
+  onHighlightSegment: (idx: number | null) => void
   onReset: () => void
 }
 
@@ -16,6 +23,8 @@ export function Sidebar({
   route,
   isFetching,
   error,
+  highlightedSegmentIdx,
+  onHighlightSegment,
   onReset,
 }: SidebarProps) {
   return (
@@ -63,7 +72,21 @@ export function Sidebar({
         </p>
       )}
 
-      {route && <Stats route={route} />}
+      {route && (
+        <>
+          <Stats route={route} />
+          {route.breakdown.length > 0 && (
+            <Composition breakdown={route.breakdown} />
+          )}
+          {route.segments.length > 0 && (
+            <SegmentList
+              segments={route.segments}
+              highlightedIdx={highlightedSegmentIdx}
+              onHighlight={onHighlightSegment}
+            />
+          )}
+        </>
+      )}
 
       {(start || end) && (
         <button
@@ -153,6 +176,107 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dt className="text-xs uppercase tracking-wide text-slate-500">{label}</dt>
       <dd className="mt-0.5 font-semibold text-slate-900">{value}</dd>
     </div>
+  )
+}
+
+function Composition({ breakdown }: { breakdown: BreakdownEntry[] }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3">
+      <h2 className="mb-3 text-sm font-semibold text-slate-900">Composition</h2>
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+        {breakdown.map((b) => (
+          <div
+            key={b.category}
+            style={{
+              width: `${b.share * 100}%`,
+              backgroundColor: CATEGORY_META[b.category].color,
+            }}
+            title={`${CATEGORY_META[b.category].label} — ${(b.share * 100).toFixed(0)}%`}
+          />
+        ))}
+      </div>
+      <ul className="mt-3 space-y-1.5 text-xs">
+        {breakdown.map((b) => (
+          <li key={b.category} className="flex items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: CATEGORY_META[b.category].color }}
+            />
+            <span className="flex-1 text-slate-700">
+              {CATEGORY_META[b.category].label}
+            </span>
+            <span className="font-medium tabular-nums text-slate-900">
+              {(b.share * 100).toFixed(0)}%
+            </span>
+            <span className="w-16 text-right tabular-nums text-slate-500">
+              {formatDistance(b.distanceM / 1000)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function SegmentList({
+  segments,
+  highlightedIdx,
+  onHighlight,
+}: {
+  segments: Segment[]
+  highlightedIdx: number | null
+  onHighlight: (idx: number | null) => void
+}) {
+  return (
+    <details className="rounded-md border border-slate-200 bg-white">
+      <summary className="cursor-pointer list-none p-3 text-sm font-semibold text-slate-900 marker:hidden">
+        <span className="inline-flex items-center gap-2">
+          <span>Détail des segments</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            {segments.length}
+          </span>
+        </span>
+      </summary>
+      <ol
+        className="max-h-72 overflow-y-auto border-t border-slate-100"
+        onMouseLeave={() => onHighlight(null)}
+      >
+        {segments.map((s, idx) => {
+          const meta = CATEGORY_META[s.category]
+          const active = highlightedIdx === idx
+          return (
+            <li
+              key={idx}
+              onMouseEnter={() => onHighlight(idx)}
+              onClick={() => onHighlight(active ? null : idx)}
+              className={`flex cursor-pointer items-center gap-3 border-b border-slate-100 px-3 py-2 text-xs last:border-b-0 ${
+                active ? 'bg-blue-50' : 'hover:bg-slate-50'
+              }`}
+            >
+              <span
+                className="h-3 w-1 shrink-0 rounded-sm"
+                style={{ backgroundColor: meta.color }}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-slate-900">{meta.label}</div>
+                <div className="truncate text-slate-500">
+                  {[s.primaryHighway, s.surface].filter(Boolean).join(' · ') ||
+                    '—'}
+                </div>
+              </div>
+              <div className="text-right tabular-nums">
+                <div className="font-medium text-slate-900">
+                  {formatDistance(s.distanceM / 1000)}
+                </div>
+                <div className="text-slate-500">
+                  {s.startKm.toFixed(1)}–{s.endKm.toFixed(1)}
+                </div>
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </details>
   )
 }
 
