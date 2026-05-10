@@ -1,5 +1,10 @@
 import type { FeatureCollection } from 'geojson'
-import type { LngLat, RouteResult, RouteStats } from '../types'
+import type {
+  LngLat,
+  RouteResult,
+  RouteStats,
+  RoutingProfile,
+} from '../types'
 import { buildSegments } from './segments'
 
 const BROUTER_BASE = 'https://brouter.de/brouter'
@@ -11,12 +16,13 @@ export function buildBrouterUrl(
   end: LngLat,
   profile: string,
   format: BrouterFormat,
+  alternativeIdx = 0,
 ): string {
   const lonlats = `${start.lng},${start.lat}|${end.lng},${end.lat}`
   const params = new URLSearchParams({
     lonlats,
     profile,
-    alternativeidx: '0',
+    alternativeidx: String(alternativeIdx),
     format,
   })
   return `${BROUTER_BASE}?${params.toString()}`
@@ -51,12 +57,13 @@ function parseStats(props: BrouterTrackProps): RouteStats {
   }
 }
 
-export async function fetchRoute(
+async function fetchSingleRoute(
   start: LngLat,
   end: LngLat,
-  profile = 'trekking',
+  profile: RoutingProfile,
+  alternativeIdx: number,
 ): Promise<RouteResult> {
-  const url = buildBrouterUrl(start, end, profile, 'geojson')
+  const url = buildBrouterUrl(start, end, profile, 'geojson', alternativeIdx)
   const res = await fetch(url)
   if (!res.ok) {
     const text = await res.text()
@@ -67,11 +74,40 @@ export async function fetchRoute(
   const props = (feature?.properties ?? {}) as BrouterTrackProps
   const { segments, segmentsGeoJson, breakdown } = buildSegments(geojson)
   return {
+    alternativeIdx,
     geojson,
     segmentsGeoJson,
     segments,
     breakdown,
     stats: parseStats(props),
-    rawGpxUrl: buildBrouterUrl(start, end, profile, 'gpx'),
+    rawGpxUrl: buildBrouterUrl(start, end, profile, 'gpx', alternativeIdx),
   }
+}
+
+export async function fetchRoutes(
+  start: LngLat,
+  end: LngLat,
+  profile: RoutingProfile,
+): Promise<RouteResult[]> {
+  // Fetch up to 3 alternatives in parallel. BRouter may not always return one
+  // for every index — failures are filtered out so we keep what's available.
+  const indices = [0, 1, 2]
+  const settled = await Promise.allSettled(
+    indices.map((idx) => fetchSingleRoute(start, end, profile, idx)),
+  )
+  const results: RouteResult[] = []
+  for (const s of settled) {
+    if (s.status === 'fulfilled') results.push(s.value)
+  }
+  if (results.length === 0) {
+    // Surface the first failure so the UI can show an error.
+    const firstReject = settled.find((s) => s.status === 'rejected')
+    if (firstReject && firstReject.status === 'rejected') {
+      throw firstReject.reason instanceof Error
+        ? firstReject.reason
+        : new Error(String(firstReject.reason))
+    }
+    throw new Error('Aucun itinéraire trouvé')
+  }
+  return results
 }

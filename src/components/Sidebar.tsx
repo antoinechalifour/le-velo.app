@@ -1,4 +1,9 @@
-import type { LngLat, RouteResult } from '../types'
+import {
+  PROFILES,
+  type LngLat,
+  type RouteResult,
+  type RoutingProfile,
+} from '../types'
 import { formatDistance, formatDuration, formatElevation } from '../lib/format'
 import {
   CATEGORY_META,
@@ -9,99 +14,385 @@ import {
 type SidebarProps = {
   start: LngLat | null
   end: LngLat | null
-  route: RouteResult | null
+  profile: RoutingProfile
+  routes: RouteResult[]
+  selectedRouteIdx: number
   isFetching: boolean
   error: Error | null
   highlightedSegmentIdx: number | null
+  sheetOpen: boolean
+  onToggleSheet: () => void
+  onProfileChange: (profile: RoutingProfile) => void
+  onSelectRoute: (idx: number) => void
   onHighlightSegment: (idx: number | null) => void
   onReset: () => void
 }
 
+const PEEK_HEIGHT = '5.5rem'
+
 export function Sidebar({
   start,
   end,
-  route,
+  profile,
+  routes,
+  selectedRouteIdx,
   isFetching,
   error,
   highlightedSegmentIdx,
+  sheetOpen,
+  onToggleSheet,
+  onProfileChange,
+  onSelectRoute,
   onHighlightSegment,
   onReset,
 }: SidebarProps) {
+  const selectedRoute = routes[selectedRouteIdx] ?? null
+  const peekStatus = computePeekStatus(
+    start,
+    end,
+    selectedRoute,
+    isFetching,
+    error,
+  )
+
   return (
-    <aside className="flex h-full w-96 flex-col gap-4 overflow-y-auto border-r border-slate-200 bg-white p-5">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900">Velo Maps</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Itinéraires vélo orientés voies cyclables référencées (OSM + BRouter).
-        </p>
-      </header>
-
-      <Step
-        index={1}
-        label="Point de départ"
-        active={!start}
-        value={formatPoint(start)}
+    <aside
+      className={`
+        fixed bottom-0 left-0 right-0 z-10 flex h-[85dvh] max-h-[85dvh] flex-col
+        overflow-hidden rounded-t-2xl bg-white shadow-2xl
+        transition-transform duration-300 ease-out
+        md:static md:h-full md:max-h-none md:w-96 md:translate-y-0 md:rounded-none
+        md:border-r md:border-slate-200 md:shadow-none md:transition-none
+      `}
+      style={
+        sheetOpen
+          ? undefined
+          : { transform: `translateY(calc(100% - ${PEEK_HEIGHT}))` }
+      }
+    >
+      <PeekBar
+        status={peekStatus}
+        sheetOpen={sheetOpen}
+        onToggle={onToggleSheet}
       />
-      <Step
-        index={2}
-        label="Point d'arrivée"
-        active={!!start && !end}
-        value={formatPoint(end)}
-      />
 
-      {!start && (
-        <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-600">
-          Cliquez sur la carte pour poser le point de départ.
-        </p>
-      )}
-      {start && !end && (
-        <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-600">
-          Cliquez sur la carte pour poser le point d'arrivée.
-        </p>
-      )}
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5 pt-2 md:pt-5">
+        <header className="hidden md:block">
+          <h1 className="text-xl font-semibold text-slate-900">Velo Maps</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Itinéraires vélo orientés voies cyclables référencées (OSM +
+            BRouter).
+          </p>
+        </header>
 
-      {isFetching && (
-        <p className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
-          Calcul de l'itinéraire…
-        </p>
-      )}
+        <ProfilePicker value={profile} onChange={onProfileChange} />
 
-      {error && (
-        <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {error.message}
-        </p>
-      )}
+        <Step
+          index={1}
+          label="Point de départ"
+          active={!start}
+          value={formatPoint(start)}
+        />
+        <Step
+          index={2}
+          label="Point d'arrivée"
+          active={!!start && !end}
+          value={formatPoint(end)}
+        />
 
-      {route && (
-        <>
-          <Stats route={route} />
-          {route.breakdown.length > 0 && (
-            <Composition breakdown={route.breakdown} />
-          )}
-          {route.segments.length > 0 && (
-            <SegmentList
-              segments={route.segments}
-              highlightedIdx={highlightedSegmentIdx}
-              onHighlight={onHighlightSegment}
-            />
-          )}
-        </>
-      )}
+        {!start && (
+          <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-600">
+            Cliquez sur la carte pour poser le point de départ.
+          </p>
+        )}
+        {start && !end && (
+          <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-600">
+            Cliquez sur la carte pour poser le point d'arrivée.
+          </p>
+        )}
 
-      {(start || end) && (
-        <button
-          type="button"
-          onClick={onReset}
-          className="mt-auto rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          Réinitialiser
-        </button>
-      )}
+        {isFetching && (
+          <p className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
+            Calcul des itinéraires…
+          </p>
+        )}
 
-      <footer className="text-xs text-slate-400">
-        Données &copy; OpenStreetMap. Routage : brouter.de.
-      </footer>
+        {error && (
+          <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+            {error.message}
+          </p>
+        )}
+
+        {routes.length > 1 && (
+          <Alternatives
+            routes={routes}
+            selectedIdx={selectedRouteIdx}
+            onSelect={onSelectRoute}
+          />
+        )}
+
+        {selectedRoute && (
+          <>
+            <Stats route={selectedRoute} />
+            {selectedRoute.breakdown.length > 0 && (
+              <Composition breakdown={selectedRoute.breakdown} />
+            )}
+            {selectedRoute.segments.length > 0 && (
+              <SegmentList
+                segments={selectedRoute.segments}
+                highlightedIdx={highlightedSegmentIdx}
+                onHighlight={onHighlightSegment}
+              />
+            )}
+          </>
+        )}
+
+        {(start || end) && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="mt-auto rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Réinitialiser
+          </button>
+        )}
+
+        <footer className="text-xs text-slate-400">
+          Données &copy; OpenStreetMap. Routage : brouter.de.
+        </footer>
+      </div>
     </aside>
+  )
+}
+
+type PeekStatus =
+  | { kind: 'idle' }
+  | { kind: 'instruction'; text: string }
+  | { kind: 'fetching' }
+  | { kind: 'error' }
+  | { kind: 'route'; route: RouteResult }
+
+function computePeekStatus(
+  start: LngLat | null,
+  end: LngLat | null,
+  route: RouteResult | null,
+  isFetching: boolean,
+  error: Error | null,
+): PeekStatus {
+  if (error) return { kind: 'error' }
+  if (isFetching) return { kind: 'fetching' }
+  if (route) return { kind: 'route', route }
+  if (!start) {
+    return { kind: 'instruction', text: 'Posez le départ sur la carte' }
+  }
+  if (!end) {
+    return { kind: 'instruction', text: 'Posez l\u2019arrivée sur la carte' }
+  }
+  return { kind: 'idle' }
+}
+
+function PeekBar({
+  status,
+  sheetOpen,
+  onToggle,
+}: {
+  status: PeekStatus
+  sheetOpen: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={sheetOpen ? 'Fermer le panneau' : 'Ouvrir le panneau'}
+      className="flex shrink-0 flex-col items-stretch border-b border-slate-100 md:hidden"
+      style={{ height: PEEK_HEIGHT }}
+    >
+      <div className="flex items-center justify-center pt-2 pb-1">
+        <span className="block h-1 w-10 rounded-full bg-slate-300" />
+      </div>
+      <div className="flex flex-1 items-center gap-3 px-4 pb-3 text-left">
+        <PeekIcon status={status} />
+        <PeekText status={status} />
+        <ChevronIcon open={sheetOpen} />
+      </div>
+    </button>
+  )
+}
+
+function PeekIcon({ status }: { status: PeekStatus }) {
+  const cls =
+    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold'
+  if (status.kind === 'route') {
+    return <span className={`${cls} bg-slate-900 text-white`}>↗</span>
+  }
+  if (status.kind === 'error') {
+    return <span className={`${cls} bg-red-100 text-red-600`}>!</span>
+  }
+  if (status.kind === 'fetching') {
+    return (
+      <span className={`${cls} bg-blue-100 text-blue-600`}>
+        <span className="block h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+      </span>
+    )
+  }
+  return <span className={`${cls} bg-blue-100 text-blue-600`}>📍</span>
+}
+
+function PeekText({ status }: { status: PeekStatus }) {
+  if (status.kind === 'route') {
+    const r = status.route
+    return (
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold text-slate-900">
+          {formatDistance(r.stats.distanceKm)} ·{' '}
+          {formatDuration(r.stats.durationMin)}
+        </div>
+        <div className="truncate text-xs text-slate-500">
+          ↑ {formatElevation(r.stats.ascentM)} · ↓{' '}
+          {formatElevation(r.stats.descentM)}
+        </div>
+      </div>
+    )
+  }
+  if (status.kind === 'error') {
+    return (
+      <div className="min-w-0 flex-1 truncate text-sm font-medium text-red-700">
+        Erreur de calcul
+      </div>
+    )
+  }
+  if (status.kind === 'fetching') {
+    return (
+      <div className="min-w-0 flex-1 text-sm font-medium text-slate-700">
+        Calcul de l&apos;itinéraire…
+      </div>
+    )
+  }
+  if (status.kind === 'instruction') {
+    return (
+      <div className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">
+        {status.text}
+      </div>
+    )
+  }
+  return (
+    <div className="min-w-0 flex-1 text-sm font-medium text-slate-700">
+      Velo Maps
+    </div>
+  )
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`shrink-0 text-slate-400 transition-transform duration-300 ${
+        open ? '' : 'rotate-180'
+      }`}
+      aria-hidden="true"
+    >
+      <polyline points="6 15 12 9 18 15" />
+    </svg>
+  )
+}
+
+function ProfilePicker({
+  value,
+  onChange,
+}: {
+  value: RoutingProfile
+  onChange: (p: RoutingProfile) => void
+}) {
+  const active = PROFILES.find((p) => p.id === value)
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3">
+      <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+        Type de trajet
+      </h2>
+      <div className="grid grid-cols-4 gap-1 rounded-md bg-slate-100 p-1">
+        {PROFILES.map((p) => {
+          const selected = p.id === value
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onChange(p.id)}
+              className={`rounded px-2 py-1.5 text-xs font-medium transition ${
+                selected
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {p.label}
+            </button>
+          )
+        })}
+      </div>
+      {active && <p className="mt-2 text-xs text-slate-500">{active.hint}</p>}
+    </div>
+  )
+}
+
+function Alternatives({
+  routes,
+  selectedIdx,
+  onSelect,
+}: {
+  routes: RouteResult[]
+  selectedIdx: number
+  onSelect: (idx: number) => void
+}) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3">
+      <h2 className="mb-2 text-sm font-semibold text-slate-900">
+        Variantes ({routes.length})
+      </h2>
+      <ul className="space-y-1.5">
+        {routes.map((r, idx) => {
+          const selected = idx === selectedIdx
+          return (
+            <li key={idx}>
+              <button
+                type="button"
+                onClick={() => onSelect(idx)}
+                className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${
+                  selected
+                    ? 'border-blue-500 bg-blue-50 text-blue-900'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold ${
+                      selected
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    {String.fromCharCode(65 + idx)}
+                  </span>
+                  <span className="font-medium">
+                    {formatDistance(r.stats.distanceKm)}
+                  </span>
+                </span>
+                <span className="text-xs tabular-nums text-slate-500">
+                  {formatDuration(r.stats.durationMin)} ·{' '}
+                  {formatElevation(r.stats.ascentM)} D+
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 
@@ -155,7 +446,10 @@ function Stats({ route }: { route: RouteResult }) {
       <h2 className="mb-3 text-sm font-semibold text-slate-900">Itinéraire</h2>
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <Stat label="Distance" value={formatDistance(route.stats.distanceKm)} />
-        <Stat label="Durée est." value={formatDuration(route.stats.durationMin)} />
+        <Stat
+          label="Durée est."
+          value={formatDuration(route.stats.durationMin)}
+        />
         <Stat label="D+" value={formatElevation(route.stats.ascentM)} />
         <Stat label="D−" value={formatElevation(route.stats.descentM)} />
       </dl>
@@ -173,7 +467,9 @@ function Stats({ route }: { route: RouteResult }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-slate-500">{label}</dt>
+      <dt className="text-xs uppercase tracking-wide text-slate-500">
+        {label}
+      </dt>
       <dd className="mt-0.5 font-semibold text-slate-900">{value}</dd>
     </div>
   )

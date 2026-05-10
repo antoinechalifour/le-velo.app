@@ -19,6 +19,7 @@ export type RouteStats = {
 }
 
 export type RouteResult = {
+  alternativeIdx: number
   geojson: FeatureCollection
   segmentsGeoJson: FeatureCollection
   segments: Segment[]
@@ -26,3 +27,34 @@ export type RouteResult = {
   stats: RouteStats
   rawGpxUrl: string
 }
+
+export type RoutingProfile = 'fastbike' | 'trekking' | 'safety' | 'shortest'
+
+export type ProfileMeta = {
+  id: RoutingProfile
+  label: string
+  hint: string
+}
+
+export const PROFILES: ProfileMeta[] = [
+  {
+    id: 'fastbike',
+    label: 'Route',
+    hint: 'Vélo route — privilégie le bitume',
+  },
+  {
+    id: 'trekking',
+    label: 'Mixte',
+    hint: 'Trekking — bitume + chemins, défaut polyvalent',
+  },
+  {
+    id: 'safety',
+    label: 'Tranquille',
+    hint: 'Minimise le trafic motorisé',
+  },
+  {
+    id: 'shortest',
+    label: 'Court',
+    hint: 'Le plus direct, ignore le confort',
+  },
+]
