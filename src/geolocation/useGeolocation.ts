@@ -30,6 +30,6 @@ export function geolocationQueryOptions() {
   })
 }
 
-export function useGeolocation() {
-  return useQuery(geolocationQueryOptions())
+export function useGeolocation({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery({ ...geolocationQueryOptions(), enabled })
 }

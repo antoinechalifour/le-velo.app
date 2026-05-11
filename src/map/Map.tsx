@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   Map as MapLibre,
@@ -11,7 +11,9 @@ import {
 import type { ExpressionSpecification } from 'maplibre-gl'
 import type { Feature, FeatureCollection, LineString } from 'geojson'
 import { useRoutesQuery } from '../brouter/query'
+import { bboxOf } from '../geo/bbox'
 import type { LngLat } from '../geo/lngLat'
+import type { RoutePoint } from '../route/point'
 import {
   pointRole,
   ROLE_META,
@@ -28,6 +30,29 @@ const FRANCE_VIEW = {
   longitude: 2.5,
   latitude: 46.5,
   zoom: 5.2,
+}
+
+function initialViewFromPoints(points: RoutePoint[]) {
+  if (points.length === 0) return FRANCE_VIEW
+  if (points.length === 1) {
+    return {
+      longitude: points[0].point.lng,
+      latitude: points[0].point.lat,
+      zoom: 12,
+    }
+  }
+  const bbox = bboxOf(points.map((p) => p.point))
+  if (!bbox) return FRANCE_VIEW
+  const [a, b] = bbox
+  const lngSpan = Math.abs(b.lng - a.lng) || 0.001
+  const latSpan = Math.abs(b.lat - a.lat) || 0.001
+  const span = Math.max(lngSpan, latSpan)
+  const zoom = Math.max(3, Math.min(13, Math.log2(360 / span) - 1))
+  return {
+    longitude: (a.lng + b.lng) / 2,
+    latitude: (a.lat + b.lat) / 2,
+    zoom,
+  }
 }
 
 const OSM_STYLE = {
@@ -92,6 +117,7 @@ export function Map() {
   const cameraCommand = useAtomValue(cameraCommandAtom)
 
   const mapRef = useRef<MapRef | null>(null)
+  const [initialView] = useState(() => initialViewFromPoints(points))
 
   const colorExpression = useMemo(() => buildCategoryColorExpression(), [])
 
@@ -167,7 +193,7 @@ export function Map() {
   return (
     <MapLibre
       ref={mapRef}
-      initialViewState={FRANCE_VIEW}
+      initialViewState={initialView}
       mapStyle={OSM_STYLE}
       onClick={handleClick}
       interactiveLayerIds={[ALT_LAYER_ID]}
