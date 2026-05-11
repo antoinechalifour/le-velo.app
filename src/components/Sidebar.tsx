@@ -12,6 +12,7 @@ import {
 } from '../lib/segments'
 import { AddressSearch } from './AddressSearch'
 import { ElevationChart } from './ElevationChart'
+import { SurfaceBands } from './SurfaceBands'
 
 type SidebarProps = {
   start: LngLat | null
@@ -160,6 +161,9 @@ export function Sidebar({
             )}
             {selectedRoute.breakdown.length > 0 && (
               <Composition breakdown={selectedRoute.breakdown} />
+            )}
+            {selectedRoute.surfaceBands.length > 0 && (
+              <SurfaceBands bands={selectedRoute.surfaceBands} />
             )}
             {selectedRoute.segments.length > 0 && (
               <SegmentList

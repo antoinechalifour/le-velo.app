@@ -2,6 +2,7 @@ import type { FeatureCollection } from 'geojson'
 import type {
   BreakdownEntry,
   Segment,
+  SurfaceBand,
 } from './lib/segments'
 import type { ElevationPoint } from './lib/elevation'
 
@@ -25,6 +26,7 @@ export type RouteResult = {
   segmentsGeoJson: FeatureCollection
   segments: Segment[]
   breakdown: BreakdownEntry[]
+  surfaceBands: SurfaceBand[]
   elevationProfile: ElevationPoint[]
   stats: RouteStats
   rawGpxUrl: string

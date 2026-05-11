@@ -73,7 +73,8 @@ async function fetchSingleRoute(
   const geojson = (await res.json()) as FeatureCollection
   const feature = geojson.features?.[0]
   const props = (feature?.properties ?? {}) as BrouterTrackProps
-  const { segments, segmentsGeoJson, breakdown } = buildSegments(geojson)
+  const { segments, segmentsGeoJson, breakdown, surfaceBands } =
+    buildSegments(geojson)
   const elevationProfile = buildElevationProfile(geojson)
   return {
     alternativeIdx,
@@ -81,6 +82,7 @@ async function fetchSingleRoute(
     segmentsGeoJson,
     segments,
     breakdown,
+    surfaceBands,
     elevationProfile,
     stats: parseStats(props),
     rawGpxUrl: buildBrouterUrl(start, end, profile, 'gpx', alternativeIdx),

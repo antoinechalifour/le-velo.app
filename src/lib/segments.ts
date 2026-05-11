@@ -79,10 +79,99 @@ export type BreakdownEntry = {
   share: number
 }
 
+export type SurfaceCategory =
+  | 'paved'
+  | 'compacted'
+  | 'gravel'
+  | 'loose'
+  | 'unknown'
+
+export type SurfaceMeta = {
+  label: string
+  description: string
+  color: string
+}
+
+export const SURFACE_META: Record<SurfaceCategory, SurfaceMeta> = {
+  paved: {
+    label: 'Bitume',
+    description: 'Asphalte, béton, pavés',
+    color: '#475569',
+  },
+  compacted: {
+    label: 'Compacté',
+    description: 'Stabilisé, fin gravier compacté',
+    color: '#a16207',
+  },
+  gravel: {
+    label: 'Gravier',
+    description: 'Gravier, cailloux, non revêtu',
+    color: '#92400e',
+  },
+  loose: {
+    label: 'Meuble',
+    description: 'Terre, sable, herbe',
+    color: '#b91c1c',
+  },
+  unknown: {
+    label: 'Inconnu',
+    description: 'Revêtement non précisé',
+    color: '#cbd5e1',
+  },
+}
+
+export const SURFACE_ORDER: SurfaceCategory[] = [
+  'paved',
+  'compacted',
+  'gravel',
+  'loose',
+  'unknown',
+]
+
+export type SurfaceBand = {
+  category: SurfaceCategory
+  rawSurface: string | null
+  startM: number
+  endM: number
+  distanceM: number
+}
+
 export type SegmentBundle = {
   segments: Segment[]
   segmentsGeoJson: FeatureCollection
   breakdown: BreakdownEntry[]
+  surfaceBands: SurfaceBand[]
+}
+
+export function classifySurface(surface: string | null | undefined): SurfaceCategory {
+  if (!surface) return 'unknown'
+  const s = surface.toLowerCase()
+  if (
+    s === 'asphalt' ||
+    s === 'paved' ||
+    s === 'concrete' ||
+    s === 'paving_stones' ||
+    s === 'sett' ||
+    s === 'cobblestone' ||
+    s === 'chipseal' ||
+    s === 'metal' ||
+    s === 'wood'
+  ) {
+    return 'paved'
+  }
+  if (s === 'compacted' || s === 'fine_gravel') return 'compacted'
+  if (s === 'gravel' || s === 'pebblestone' || s === 'unpaved') return 'gravel'
+  if (
+    s === 'dirt' ||
+    s === 'earth' ||
+    s === 'ground' ||
+    s === 'sand' ||
+    s === 'mud' ||
+    s === 'grass'
+  ) {
+    return 'loose'
+  }
+  return 'unknown'
 }
 
 function parseTags(s: string): Record<string, string> {
@@ -167,6 +256,7 @@ export function buildSegments(geojson: FeatureCollection): SegmentBundle {
     segments: [],
     segmentsGeoJson: { type: 'FeatureCollection', features: [] },
     breakdown: [],
+    surfaceBands: [],
   }
 
   const feature = geojson.features?.[0]
@@ -236,6 +326,8 @@ export function buildSegments(geojson: FeatureCollection): SegmentBundle {
   }
 
   if (minis.length === 0) return fallbackSingleSegment(coords)
+
+  const surfaceBands = computeSurfaceBands(minis)
 
   const groups: Segment[] = []
   let cumStart = 0
@@ -323,7 +415,49 @@ export function buildSegments(geojson: FeatureCollection): SegmentBundle {
     share: byCat[c]! / totalDist,
   }))
 
-  return { segments: groups, segmentsGeoJson, breakdown }
+  return { segments: groups, segmentsGeoJson, breakdown, surfaceBands }
+}
+
+function computeSurfaceBands(
+  minis: { distanceM: number; tags: Record<string, string> }[],
+): SurfaceBand[] {
+  const bands: SurfaceBand[] = []
+  let cumStart = 0
+  let current: {
+    category: SurfaceCategory
+    rawSurface: string | null
+    distanceM: number
+  } | null = null
+  for (const m of minis) {
+    const raw = m.tags.surface ?? null
+    const cat = classifySurface(raw)
+    if (!current || current.category !== cat) {
+      if (current) {
+        bands.push({
+          category: current.category,
+          rawSurface: current.rawSurface,
+          startM: cumStart,
+          endM: cumStart + current.distanceM,
+          distanceM: current.distanceM,
+        })
+        cumStart += current.distanceM
+      }
+      current = { category: cat, rawSurface: raw, distanceM: m.distanceM }
+    } else {
+      current.distanceM += m.distanceM
+      if (!current.rawSurface && raw) current.rawSurface = raw
+    }
+  }
+  if (current) {
+    bands.push({
+      category: current.category,
+      rawSurface: current.rawSurface,
+      startM: cumStart,
+      endM: cumStart + current.distanceM,
+      distanceM: current.distanceM,
+    })
+  }
+  return bands
 }
 
 function fallbackSingleSegment(
@@ -338,6 +472,7 @@ function fallbackSingleSegment(
       segments: [],
       segmentsGeoJson: { type: 'FeatureCollection', features: [] },
       breakdown: [],
+      surfaceBands: [],
     }
   }
   const distanceM = approxLengthMeters(polyline)
@@ -363,6 +498,15 @@ function fallbackSingleSegment(
       ],
     },
     breakdown: [{ category: 'unknown', distanceM, share: 1 }],
+    surfaceBands: [
+      {
+        category: 'unknown',
+        rawSurface: null,
+        startM: 0,
+        endM: distanceM,
+        distanceM,
+      },
+    ],
   }
 }
 
