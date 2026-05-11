@@ -80,14 +80,10 @@ export function Sidebar({
         fixed bottom-0 left-0 right-0 z-10 flex h-[85dvh] max-h-[85dvh] flex-col
         overflow-hidden rounded-t-2xl bg-white shadow-2xl
         transition-transform duration-300 ease-out
+        ${sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-5.5rem)]'}
         md:static md:h-full md:max-h-none md:w-96 md:translate-y-0 md:rounded-none
         md:border-r md:border-slate-200 md:shadow-none md:transition-none
       `}
-      style={
-        sheetOpen
-          ? undefined
-          : { transform: `translateY(calc(100% - ${PEEK_HEIGHT}))` }
-      }
     >
       <PeekBar
         status={peekStatus}
