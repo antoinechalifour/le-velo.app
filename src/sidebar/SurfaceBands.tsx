@@ -1,29 +1,63 @@
+import { useAtom } from 'jotai'
 import { formatDistance } from '../format/format'
+import { pointAtDistance, type ElevationPoint } from '../route/elevation'
 import { SURFACE_META, SURFACE_ORDER } from '../route/surface'
-import { surfaceTotals, type SurfaceBand } from '../route/surfaceBands'
+import {
+  bandIdxAtDistance,
+  bandMidpoint,
+  surfaceTotals,
+  type SurfaceBand,
+} from '../route/surfaceBands'
+import { routeHoverAtom } from '../state/hover'
 
-export function SurfaceBands({ bands }: { bands: SurfaceBand[] }) {
+export function SurfaceBands({
+  bands,
+  profile,
+}: {
+  bands: SurfaceBand[]
+  profile: ElevationPoint[]
+}) {
+  const [hover, setHover] = useAtom(routeHoverAtom)
   if (bands.length === 0) return null
   const total = bands[bands.length - 1].endM
   if (total <= 0) return null
 
   const totals = surfaceTotals(bands)
   const legend = SURFACE_ORDER.filter((c) => (totals[c] ?? 0) > 0)
+  const activeIdx =
+    hover !== null ? bandIdxAtDistance(bands, hover.distanceM) : null
+
+  function hoverBand(band: SurfaceBand) {
+    const midM = bandMidpoint(band)
+    const p = pointAtDistance(profile, midM)
+    if (!p) return
+    setHover({ distanceM: p.distanceM, point: p.point })
+  }
 
   return (
     <div className="paper-card rounded-xl p-4">
-      <div className="flex h-4 w-full overflow-hidden rounded-full border border-ink/15 bg-paper-deep">
+      <div
+        className="flex h-4 w-full overflow-hidden rounded-full border border-ink/15 bg-paper-deep"
+        onMouseLeave={() => setHover(null)}
+      >
         {bands.map((b, idx) => {
           const meta = SURFACE_META[b.category]
           const title = b.rawSurface
             ? `${meta.label} (${b.rawSurface}) — ${formatDistance(b.distanceM / 1000)}`
             : `${meta.label} — ${formatDistance(b.distanceM / 1000)}`
+          const active = activeIdx === idx
           return (
             <div
               key={idx}
+              onMouseEnter={() => hoverBand(b)}
               style={{
                 width: `${(b.distanceM / total) * 100}%`,
                 backgroundColor: meta.color,
+                filter: active ? 'brightness(1.18)' : undefined,
+                boxShadow: active
+                  ? 'inset 0 0 0 2px rgba(28,25,23,0.85)'
+                  : undefined,
+                cursor: 'pointer',
               }}
               title={title}
             />

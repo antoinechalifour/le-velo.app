@@ -15,6 +15,28 @@ export type Segment = {
   surface: string | null
 }
 
+export function segmentIdxAtDistance(
+  segments: Segment[],
+  distanceM: number,
+): number | null {
+  const km = distanceM / 1000
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i]
+    if (km >= s.startKm && km <= s.endKm) return i
+  }
+  return null
+}
+
+export function segmentMidpoint(segment: Segment): {
+  distanceM: number
+  point: [number, number]
+} {
+  const distanceM = ((segment.startKm + segment.endKm) / 2) * 1000
+  const coords = segment.coordinates
+  const point = coords[Math.floor(coords.length / 2)] ?? coords[0]
+  return { distanceM, point }
+}
+
 export type SegmentBundle = {
   segments: Segment[]
   segmentsGeoJson: FeatureCollection

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { Bike } from 'lucide-react'
 import {
   Map as MapLibre,
   Marker,
@@ -21,9 +22,10 @@ import {
   roleTooltipLabel,
 } from '../route/pointRole'
 import { CATEGORY_META, CATEGORY_ORDER } from '../route/segmentCategory'
+import { segmentIdxAtDistance } from '../route/segments'
 import { cameraCommandAtom } from '../state/camera'
-import { highlightedSegmentIdxAtom } from '../state/highlight'
-import { profileHoverAtom } from '../state/hover'
+import { routeHoverAtom } from '../state/hover'
+import { userLocationAtom } from '../state/userLocation'
 import { usePointsParam, useSelectedRouteParam } from '../url/params'
 
 const FRANCE_VIEW = {
@@ -111,10 +113,17 @@ export function Map() {
       ? Math.min(Math.max(selectedRouteIdx, 0), routes.length - 1)
       : 0
 
-  const highlightedSegmentIdx = useAtomValue(highlightedSegmentIdxAtom)
-  const setHighlightedSegmentIdx = useSetAtom(highlightedSegmentIdxAtom)
-  const hover = useAtomValue(profileHoverAtom)
+  const [hover, setHover] = useAtom(routeHoverAtom)
   const cameraCommand = useAtomValue(cameraCommandAtom)
+  const userLocation = useAtomValue(userLocationAtom)
+  const setUserLocation = useSetAtom(userLocationAtom)
+  const cursorLngLatRef = useRef<LngLat | null>(null)
+
+  const selectedRoute = routes[clampedIdx] ?? null
+  const segments = selectedRoute?.segments ?? null
+  const profile = selectedRoute?.elevationProfile ?? null
+  const highlightedSegmentIdx =
+    hover && segments ? segmentIdxAtDistance(segments, hover.distanceM) : null
 
   const mapRef = useRef<MapRef | null>(null)
   const [initialView] = useState(() => initialViewFromPoints(points))
@@ -136,7 +145,7 @@ export function Map() {
     return { type: 'FeatureCollection', features }
   }, [routes, clampedIdx])
 
-  const selectedSegmentsGeoJson = routes[clampedIdx]?.segmentsGeoJson ?? null
+  const selectedSegmentsGeoJson = selectedRoute?.segmentsGeoJson ?? null
 
   const handleClick = useCallback(
     (e: MapMouseEvent) => {
@@ -149,14 +158,70 @@ export function Map() {
           return
         }
       }
-      setHighlightedSegmentIdx(null)
       setPoints((prev) => [
         ...prev,
         { point: { lng: e.lngLat.lng, lat: e.lngLat.lat }, label: null },
       ])
     },
-    [setHighlightedSegmentIdx, setPoints, setSelectedRouteIdx],
+    [setPoints, setSelectedRouteIdx],
   )
+
+  const handleMouseMove = useCallback(
+    (e: MapMouseEvent) => {
+      cursorLngLatRef.current = { lng: e.lngLat.lng, lat: e.lngLat.lat }
+      const map = mapRef.current
+      if (!map || !profile || profile.length === 0) return
+      const mouse = e.point
+      let bestSqDist = Infinity
+      let bestPoint: (typeof profile)[number] | null = null
+      for (const p of profile) {
+        const proj = map.project([p.point.lng, p.point.lat])
+        const dx = proj.x - mouse.x
+        const dy = proj.y - mouse.y
+        const sq = dx * dx + dy * dy
+        if (sq < bestSqDist) {
+          bestSqDist = sq
+          bestPoint = p
+        }
+      }
+      const HOVER_TOLERANCE_PX = 22
+      if (
+        !bestPoint ||
+        bestSqDist > HOVER_TOLERANCE_PX * HOVER_TOLERANCE_PX
+      ) {
+        if (hover) setHover(null)
+        return
+      }
+      setHover({ distanceM: bestPoint.distanceM, point: bestPoint.point })
+    },
+    [profile, setHover, hover],
+  )
+
+  const handleMouseLeave = useCallback(() => {
+    cursorLngLatRef.current = null
+    if (hover) setHover(null)
+  }, [hover, setHover])
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'd' && e.key !== 'D') return
+      const target = e.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+      const loc = cursorLngLatRef.current
+      if (!loc) return
+      setUserLocation(loc)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [setUserLocation])
 
   useEffect(() => {
     if (!cameraCommand) return
@@ -196,9 +261,21 @@ export function Map() {
       initialViewState={initialView}
       mapStyle={OSM_STYLE}
       onClick={handleClick}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       interactiveLayerIds={[ALT_LAYER_ID]}
       style={{ width: '100%', height: '100%', backgroundColor: '#efe6d2' }}
     >
+      {userLocation && (
+        <Marker
+          longitude={userLocation.lng}
+          latitude={userLocation.lat}
+          anchor="center"
+        >
+          <UserLocationMarker />
+        </Marker>
+      )}
+
       {points.map((p, idx) => {
         const role = pointRole(idx, points.length)
         return (
@@ -375,5 +452,17 @@ function HoverDot() {
       className="h-3.5 w-3.5 rounded-full border-2 border-paper-soft shadow-md"
       style={{ backgroundColor: '#b8501a' }}
     />
+  )
+}
+
+function UserLocationMarker() {
+  return (
+    <div
+      className="flex h-9 w-9 items-center justify-center rounded-full text-paper-soft shadow-[0_3px_6px_-1px_rgba(28,25,23,0.45)] ring-[3px] ring-paper-soft"
+      style={{ backgroundColor: '#1d4ed8' }}
+      title="Votre position"
+    >
+      <Bike size={20} strokeWidth={2.25} />
+    </div>
   )
 }

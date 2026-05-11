@@ -17,3 +17,18 @@ export function surfaceTotals(
   }
   return totals
 }
+
+export function bandIdxAtDistance(
+  bands: SurfaceBand[],
+  distanceM: number,
+): number | null {
+  for (let i = 0; i < bands.length; i++) {
+    const b = bands[i]
+    if (distanceM >= b.startM && distanceM <= b.endM) return i
+  }
+  return null
+}
+
+export function bandMidpoint(band: SurfaceBand): number {
+  return (band.startM + band.endM) / 2
+}

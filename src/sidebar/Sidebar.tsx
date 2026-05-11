@@ -2,7 +2,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { useRoutesQuery } from '../brouter/query'
 import { ElevationChart } from '../elevation/ElevationChart'
 import { useMagnetic } from '../hooks/useMagnetic'
-import { highlightedSegmentIdxAtom } from '../state/highlight'
+import { routeHoverAtom } from '../state/hover'
 import { sheetOpenAtom } from '../state/sheet'
 import {
   usePointsParam,
@@ -23,7 +23,7 @@ import { useAutoOpenSheet } from './useAutoOpenSheet'
 export function Sidebar() {
   const [points, setPoints] = usePointsParam()
   const [selectedRouteIdx, setSelectedRouteIdx] = useSelectedRouteParam()
-  const setHighlightedSegmentIdx = useSetAtom(highlightedSegmentIdxAtom)
+  const setHover = useSetAtom(routeHoverAtom)
   const sheetOpen = useAtomValue(sheetOpenAtom)
   const { data, isFetching, error } = useRoutesQuery()
 
@@ -45,7 +45,7 @@ export function Sidebar() {
   function handleReset() {
     setPoints([])
     setSelectedRouteIdx(0)
-    setHighlightedSegmentIdx(null)
+    setHover(null)
   }
 
   return (
@@ -103,10 +103,7 @@ export function Sidebar() {
               </Section>
               {selectedRoute.elevationProfile.length > 1 && (
                 <Section eyebrow="Profil altimétrique">
-                  <ElevationChart
-                    profile={selectedRoute.elevationProfile}
-                    segments={selectedRoute.segments}
-                  />
+                  <ElevationChart profile={selectedRoute.elevationProfile} />
                 </Section>
               )}
               {selectedRoute.breakdown.length > 0 && (
@@ -116,7 +113,10 @@ export function Sidebar() {
               )}
               {selectedRoute.surfaceBands.length > 0 && (
                 <Section eyebrow="Revêtement">
-                  <SurfaceBands bands={selectedRoute.surfaceBands} />
+                  <SurfaceBands
+                    bands={selectedRoute.surfaceBands}
+                    profile={selectedRoute.elevationProfile}
+                  />
                 </Section>
               )}
               {selectedRoute.segments.length > 0 && (

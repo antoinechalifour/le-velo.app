@@ -1,12 +1,18 @@
 import { useAtom } from 'jotai'
 import { formatDistance } from '../format/format'
 import { CATEGORY_META } from '../route/segmentCategory'
-import type { Segment } from '../route/segments'
+import {
+  segmentIdxAtDistance,
+  segmentMidpoint,
+  type Segment,
+} from '../route/segments'
 import { surfaceLabel } from '../route/surface'
-import { highlightedSegmentIdxAtom } from '../state/highlight'
+import { routeHoverAtom } from '../state/hover'
 
 export function SegmentList({ segments }: { segments: Segment[] }) {
-  const [highlightedIdx, setHighlightedIdx] = useAtom(highlightedSegmentIdxAtom)
+  const [hover, setHover] = useAtom(routeHoverAtom)
+  const activeIdx =
+    hover !== null ? segmentIdxAtDistance(segments, hover.distanceM) : null
 
   return (
     <details className="paper-card group overflow-hidden rounded-xl">
@@ -26,16 +32,21 @@ export function SegmentList({ segments }: { segments: Segment[] }) {
       </summary>
       <ol
         className="scroll-soft max-h-80 overflow-y-auto border-t border-ink/10"
-        onMouseLeave={() => setHighlightedIdx(null)}
+        onMouseLeave={() => setHover(null)}
       >
         {segments.map((s, idx) => {
           const meta = CATEGORY_META[s.category]
-          const active = highlightedIdx === idx
+          const active = activeIdx === idx
           return (
             <li
               key={idx}
-              onMouseEnter={() => setHighlightedIdx(idx)}
-              onClick={() => setHighlightedIdx(active ? null : idx)}
+              onMouseEnter={() => {
+                const { distanceM, point } = segmentMidpoint(s)
+                setHover({
+                  distanceM,
+                  point: { lng: point[0], lat: point[1] },
+                })
+              }}
               data-active={active}
               className="ink-wash flex cursor-pointer items-center gap-3 border-b border-ink/8 px-4 py-2.5 last:border-b-0"
             >
