@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { useSetAtom } from 'jotai'
-import { GripVertical, X } from 'lucide-react'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { GripVertical, LocateFixed, X } from 'lucide-react'
 import { AddressSearch } from '../addressSearch/AddressSearch'
 import type { LngLat } from '../geo/lngLat'
 import { nominatimReverseQueryOptions } from '../nominatim/query'
 import { pointRole, ROLE_META, roleLetter } from '../route/pointRole'
 import type { RoutePoint } from '../route/point'
 import { pushCameraCommandAtom } from '../state/camera'
+import { userLocationAtom } from '../state/userLocation'
 import { usePointsParam } from '../url/params'
 import { useDragReorder } from './useDragReorder'
 
@@ -34,6 +35,7 @@ function addPlaceholder(count: number): string {
 export function PointList() {
   const [points, setPoints] = usePointsParam()
   const pushCamera = useSetAtom(pushCameraCommandAtom)
+  const userLocation = useAtomValue(userLocationAtom)
 
   const drag = useDragReorder((from, to) => {
     setPoints((prev) => {
@@ -47,9 +49,14 @@ export function PointList() {
     })
   })
 
-  function handleAdd(point: LngLat, label: string) {
+  function handleAdd(point: LngLat, label: string | null) {
     setPoints((prev) => [...prev, { point, label }])
     pushCamera({ type: 'flyTo', point })
+  }
+
+  function handleAddMyLocation() {
+    if (!userLocation) return
+    handleAdd(userLocation, null)
   }
 
   function handleRemove(idx: number) {
@@ -86,6 +93,27 @@ export function PointList() {
           placeholder={addPlaceholder(points.length)}
           onSelect={handleAdd}
         />
+        <button
+          type="button"
+          onClick={handleAddMyLocation}
+          disabled={!userLocation}
+          aria-label={
+            userLocation
+              ? 'Utiliser ma position comme point'
+              : 'Géolocalisation en cours…'
+          }
+          title={
+            userLocation
+              ? 'Utiliser ma position'
+              : 'En attente de la géolocalisation…'
+          }
+          className="focus-ring mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-ink/20 bg-paper-soft px-3 py-2 text-[0.82rem] font-medium text-sepia transition hover:border-rust/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-ink/20 disabled:hover:text-sepia"
+        >
+          <LocateFixed size={14} strokeWidth={2.25} />
+          {points.length === 0
+            ? 'Partir de ma position'
+            : 'Utiliser ma position'}
+        </button>
         <p className="mt-2 text-[0.72rem] italic text-sepia-soft">
           …ou pointez directement sur la carte.
         </p>
