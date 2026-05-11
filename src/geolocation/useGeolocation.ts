@@ -1,43 +1,35 @@
-import { useEffect, useState } from 'react'
+import { queryOptions, useQuery } from '@tanstack/react-query'
 import type { LngLat } from '../geo/lngLat'
 
-type GeolocationState =
-  | { status: 'idle' }
-  | { status: 'pending' }
-  | { status: 'ready'; position: LngLat }
-  | { status: 'error'; reason: string }
-
-function initialState(): GeolocationState {
-  if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-    return { status: 'error', reason: 'Géolocalisation non disponible' }
-  }
-  return { status: 'pending' }
-}
-
-export function useGeolocation(): GeolocationState {
-  const [state, setState] = useState<GeolocationState>(initialState)
-
-  useEffect(() => {
-    if (state.status !== 'pending') return
-    let cancelled = false
+function getCurrentPosition(signal: AbortSignal): Promise<LngLat> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      reject(new Error('Géolocalisation non disponible'))
+      return
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        if (cancelled) return
-        setState({
-          status: 'ready',
-          position: { lng: pos.coords.longitude, lat: pos.coords.latitude },
-        })
+        if (signal.aborted) return
+        resolve({ lng: pos.coords.longitude, lat: pos.coords.latitude })
       },
       (err) => {
-        if (cancelled) return
-        setState({ status: 'error', reason: err.message })
+        if (signal.aborted) return
+        reject(new Error(err.message))
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 },
     )
-    return () => {
-      cancelled = true
-    }
-  }, [state.status])
+  })
+}
 
-  return state
+export function geolocationQueryOptions() {
+  return queryOptions({
+    queryKey: ['geolocation'],
+    queryFn: ({ signal }) => getCurrentPosition(signal),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
+}
+
+export function useGeolocation() {
+  return useQuery(geolocationQueryOptions())
 }

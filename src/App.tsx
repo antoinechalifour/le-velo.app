@@ -45,8 +45,8 @@ function useInitialCamera() {
   useEffect(() => {
     if (doneRef.current) return
     if (initialPointsRef.current.length > 0) return
-    if (geo.status !== 'ready') return
-    pushCamera({ type: 'flyTo', point: geo.position })
+    if (!geo.data) return
+    pushCamera({ type: 'flyTo', point: geo.data })
     doneRef.current = true
   }, [geo, pushCamera])
 }
