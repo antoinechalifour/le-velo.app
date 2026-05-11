@@ -1,4 +1,4 @@
-import type { LngLat, RoutingProfile } from '../types'
+import type { RoutePoint, RoutingProfile } from '../types'
 
 const PROFILE_VALUES: RoutingProfile[] = [
   'fastbike',
@@ -7,14 +7,8 @@ const PROFILE_VALUES: RoutingProfile[] = [
   'shortest',
 ]
 
-export type UrlPoint = {
-  point: LngLat
-  label: string | null
-}
-
 export type UrlState = {
-  start: UrlPoint | null
-  end: UrlPoint | null
+  points: RoutePoint[]
   profile: RoutingProfile | null
 }
 
@@ -24,22 +18,32 @@ export function parseUrlState(hash: string): UrlState {
   const trimmed = hash.startsWith('#') ? hash.slice(1) : hash
   const params = new URLSearchParams(trimmed)
   return {
-    start: parsePoint(params.get('s')),
-    end: parsePoint(params.get('e')),
+    points: parsePoints(params.get('pts')),
     profile: parseProfile(params.get('p')),
   }
 }
 
 export function serializeUrlState(state: UrlState): string {
   const params = new URLSearchParams()
-  if (state.start) params.set('s', formatPoint(state.start))
-  if (state.end) params.set('e', formatPoint(state.end))
+  if (state.points.length > 0) {
+    params.set('pts', state.points.map(formatPoint).join(';'))
+  }
   if (state.profile) params.set('p', state.profile)
   const s = params.toString()
   return s ? `#${s}` : ''
 }
 
-function parsePoint(raw: string | null): UrlPoint | null {
+function parsePoints(raw: string | null): RoutePoint[] {
+  if (!raw) return []
+  const out: RoutePoint[] = []
+  for (const chunk of raw.split(';')) {
+    const p = parseSinglePoint(chunk)
+    if (p) out.push(p)
+  }
+  return out
+}
+
+function parseSinglePoint(raw: string): RoutePoint | null {
   if (!raw) return null
   const parts = raw.split(',')
   if (parts.length < 2) return null
@@ -54,12 +58,12 @@ function parsePoint(raw: string | null): UrlPoint | null {
   }
 }
 
-function formatPoint(p: UrlPoint): string {
+function formatPoint(p: RoutePoint): string {
   const lat = round5(p.point.lat)
   const lng = round5(p.point.lng)
   const base = `${lat},${lng}`
   if (!p.label) return base
-  const label = p.label.replace(/,/g, ' ').slice(0, LABEL_MAX).trim()
+  const label = p.label.replace(/[,;]/g, ' ').slice(0, LABEL_MAX).trim()
   return label ? `${base},${label}` : base
 }
 

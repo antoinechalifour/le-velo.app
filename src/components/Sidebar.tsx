@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import {
   PROFILES,
   type LngLat,
+  type RoutePoint,
   type RouteResult,
   type RoutingProfile,
 } from '../types'
@@ -15,10 +17,7 @@ import { ElevationChart } from './ElevationChart'
 import { SurfaceBands } from './SurfaceBands'
 
 type SidebarProps = {
-  start: LngLat | null
-  end: LngLat | null
-  startLabel: string | null
-  endLabel: string | null
+  points: RoutePoint[]
   profile: RoutingProfile
   routes: RouteResult[]
   selectedRouteIdx: number
@@ -34,20 +33,16 @@ type SidebarProps = {
   onProfileChange: (profile: RoutingProfile) => void
   onSelectRoute: (idx: number) => void
   onHighlightSegment: (idx: number | null) => void
-  onSelectStart: (point: LngLat, label: string) => void
-  onSelectEnd: (point: LngLat, label: string) => void
-  onClearStart: () => void
-  onClearEnd: () => void
+  onAddPoint: (point: LngLat, label: string) => void
+  onRemovePoint: (idx: number) => void
+  onReorderPoints: (fromIdx: number, toIdx: number) => void
   onReset: () => void
 }
 
 const PEEK_HEIGHT = '5.5rem'
 
 export function Sidebar({
-  start,
-  end,
-  startLabel,
-  endLabel,
+  points,
   profile,
   routes,
   selectedRouteIdx,
@@ -61,16 +56,14 @@ export function Sidebar({
   onProfileChange,
   onSelectRoute,
   onHighlightSegment,
-  onSelectStart,
-  onSelectEnd,
-  onClearStart,
-  onClearEnd,
+  onAddPoint,
+  onRemovePoint,
+  onReorderPoints,
   onReset,
 }: SidebarProps) {
   const selectedRoute = routes[selectedRouteIdx] ?? null
   const peekStatus = computePeekStatus(
-    start,
-    end,
+    points,
     selectedRoute,
     isFetching,
     error,
@@ -108,25 +101,11 @@ export function Sidebar({
 
         <ProfilePicker value={profile} onChange={onProfileChange} />
 
-        <AddressField
-          index={1}
-          label="Point de départ"
-          active={!start}
-          point={start}
-          pointLabel={startLabel}
-          placeholder="Saisir une adresse de départ…"
-          onSelect={onSelectStart}
-          onClear={onClearStart}
-        />
-        <AddressField
-          index={2}
-          label="Point d'arrivée"
-          active={!!start && !end}
-          point={end}
-          pointLabel={endLabel}
-          placeholder="Saisir une adresse d'arrivée…"
-          onSelect={onSelectEnd}
-          onClear={onClearEnd}
+        <PointList
+          points={points}
+          onAddPoint={onAddPoint}
+          onRemovePoint={onRemovePoint}
+          onReorderPoints={onReorderPoints}
         />
 
         {isFetching && (
@@ -175,7 +154,7 @@ export function Sidebar({
           </>
         )}
 
-        {(start || end) && (
+        {points.length > 0 && (
           <button
             type="button"
             onClick={onReset}
@@ -201,8 +180,7 @@ type PeekStatus =
   | { kind: 'route'; route: RouteResult }
 
 function computePeekStatus(
-  start: LngLat | null,
-  end: LngLat | null,
+  points: RoutePoint[],
   route: RouteResult | null,
   isFetching: boolean,
   error: Error | null,
@@ -210,10 +188,10 @@ function computePeekStatus(
   if (error) return { kind: 'error' }
   if (isFetching) return { kind: 'fetching' }
   if (route) return { kind: 'route', route }
-  if (!start) {
+  if (points.length === 0) {
     return { kind: 'instruction', text: 'Posez le départ sur la carte' }
   }
-  if (!end) {
+  if (points.length === 1) {
     return { kind: 'instruction', text: 'Posez l\u2019arrivée sur la carte' }
   }
   return { kind: 'idle' }
@@ -424,80 +402,137 @@ function Alternatives({
   )
 }
 
-function AddressField({
-  index,
-  label,
-  active,
-  point,
-  pointLabel,
-  placeholder,
-  onSelect,
-  onClear,
+function PointList({
+  points,
+  onAddPoint,
+  onRemovePoint,
+  onReorderPoints,
 }: {
-  index: number
-  label: string
-  active: boolean
-  point: LngLat | null
-  pointLabel: string | null
-  placeholder: string
-  onSelect: (point: LngLat, label: string) => void
-  onClear: () => void
+  points: RoutePoint[]
+  onAddPoint: (point: LngLat, label: string) => void
+  onRemovePoint: (idx: number) => void
+  onReorderPoints: (from: number, to: number) => void
 }) {
-  const hasValue = !!point
-  const displayValue = pointLabel ?? formatPoint(point)
+  const [dragFrom, setDragFrom] = useState<number | null>(null)
+  const [dragOver, setDragOver] = useState<number | null>(null)
+
   return (
-    <div
-      className={`rounded-md border p-3 ${
-        active
-          ? 'border-blue-300 bg-blue-50'
-          : hasValue
-            ? 'border-slate-200 bg-white'
-            : 'border-slate-200 bg-slate-50/50'
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-            hasValue
-              ? 'bg-slate-900 text-white'
-              : active
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 text-slate-500'
-          }`}
-        >
-          {index}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              {label}
+    <div className="space-y-2">
+      {points.map((p, idx) => {
+        const role = pointRole(idx, points.length)
+        const meta = ROLE_META[role]
+        const isOverTarget = dragOver === idx && dragFrom !== null && dragFrom !== idx
+        return (
+          <div
+            key={`${idx}-${p.point.lat}-${p.point.lng}`}
+            draggable
+            onDragStart={(e) => {
+              setDragFrom(idx)
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', String(idx))
+            }}
+            onDragOver={(e) => {
+              e.preventDefault()
+              if (dragFrom !== null) setDragOver(idx)
+            }}
+            onDragLeave={() => {
+              if (dragOver === idx) setDragOver(null)
+            }}
+            onDrop={(e) => {
+              e.preventDefault()
+              if (dragFrom !== null) onReorderPoints(dragFrom, idx)
+              setDragFrom(null)
+              setDragOver(null)
+            }}
+            onDragEnd={() => {
+              setDragFrom(null)
+              setDragOver(null)
+            }}
+            className={`flex items-center gap-3 rounded-md border bg-white p-3 transition ${
+              isOverTarget ? 'border-blue-400 ring-2 ring-blue-200' : 'border-slate-200'
+            } ${dragFrom === idx ? 'opacity-50' : ''}`}
+          >
+            <span
+              className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded-full text-xs font-bold text-white"
+              style={{ backgroundColor: meta.color }}
+              title="Glisser pour réordonner"
+            >
+              {role === 'start' ? 'A' : role === 'end' ? 'B' : idx + 1}
             </span>
-            {hasValue && (
-              <button
-                type="button"
-                onClick={onClear}
-                className="text-xs font-medium text-slate-500 hover:text-slate-900"
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                {meta.label}
+              </div>
+              <div className="mt-0.5 truncate text-sm text-slate-900">
+                {p.label ?? formatPoint(p.point)}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onRemovePoint(idx)}
+              aria-label="Retirer ce point"
+              className="text-slate-400 hover:text-red-600"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                Effacer
-              </button>
-            )}
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
-          {hasValue ? (
-            <div className="mt-0.5 truncate text-sm text-slate-900">
-              {displayValue}
-            </div>
-          ) : (
-            <div className="mt-1.5 space-y-1">
-              <AddressSearch placeholder={placeholder} onSelect={onSelect} />
-              <p className="text-[11px] text-slate-500">
-                ou cliquez sur la carte
-              </p>
-            </div>
-          )}
+        )
+      })}
+
+      <div className="rounded-md border border-dashed border-slate-300 bg-slate-50/50 p-3">
+        <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+          {addLabel(points.length)}
         </div>
+        <AddressSearch
+          placeholder={addPlaceholder(points.length)}
+          onSelect={onAddPoint}
+        />
+        <p className="mt-1 text-[11px] text-slate-500">
+          ou cliquez sur la carte
+        </p>
       </div>
     </div>
   )
+}
+
+type PointRole = 'start' | 'waypoint' | 'end'
+
+function pointRole(idx: number, total: number): PointRole {
+  if (idx === 0 && total > 1) return 'start'
+  if (idx === 0) return 'start'
+  if (idx === total - 1) return 'end'
+  return 'waypoint'
+}
+
+const ROLE_META: Record<PointRole, { label: string; color: string }> = {
+  start: { label: 'Départ', color: '#16a34a' },
+  waypoint: { label: 'Étape', color: '#2563eb' },
+  end: { label: 'Arrivée', color: '#dc2626' },
+}
+
+function addLabel(count: number): string {
+  if (count === 0) return 'Point de départ'
+  if (count === 1) return 'Point d\u2019arrivée'
+  return 'Étape suivante'
+}
+
+function addPlaceholder(count: number): string {
+  if (count === 0) return 'Saisir une adresse de départ…'
+  if (count === 1) return 'Saisir une adresse d\u2019arrivée…'
+  return 'Ajouter une étape…'
 }
 
 function Stats({ route }: { route: RouteResult }) {

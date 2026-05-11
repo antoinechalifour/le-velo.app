@@ -9,12 +9,11 @@ import {
 } from 'react-map-gl/maplibre'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import type { Feature, FeatureCollection, LineString } from 'geojson'
-import type { LngLat, RouteResult } from '../types'
+import type { LngLat, RoutePoint, RouteResult } from '../types'
 import { CATEGORY_META, CATEGORY_ORDER } from '../lib/segments'
 
 type MapProps = {
-  start: LngLat | null
-  end: LngLat | null
+  points: RoutePoint[]
   routes: RouteResult[]
   selectedRouteIdx: number
   highlightedSegmentIdx: number | null
@@ -64,8 +63,7 @@ function buildCategoryColorExpression(): ExpressionSpecification {
 const ALT_LAYER_ID = 'route-alternatives-line'
 
 export function Map({
-  start,
-  end,
+  points,
   routes,
   selectedRouteIdx,
   highlightedSegmentIdx,
@@ -173,16 +171,26 @@ export function Map({
       interactiveLayerIds={[ALT_LAYER_ID]}
       style={{ width: '100%', height: '100%' }}
     >
-      {start && (
-        <Marker longitude={start.lng} latitude={start.lat} anchor="bottom">
-          <Pin color="#16a34a" label="A" />
-        </Marker>
-      )}
-      {end && (
-        <Marker longitude={end.lng} latitude={end.lat} anchor="bottom">
-          <Pin color="#dc2626" label="B" />
-        </Marker>
-      )}
+      {points.map((p, idx) => {
+        const isFirst = idx === 0
+        const isLast = idx === points.length - 1 && points.length > 1
+        const color = isFirst ? '#16a34a' : isLast ? '#dc2626' : '#2563eb'
+        const label = isFirst
+          ? 'A'
+          : isLast
+            ? 'B'
+            : String(idx + 1)
+        return (
+          <Marker
+            key={`pt-${idx}-${p.point.lat}-${p.point.lng}`}
+            longitude={p.point.lng}
+            latitude={p.point.lat}
+            anchor="bottom"
+          >
+            <Pin color={color} label={label} />
+          </Marker>
+        )
+      })}
 
       {hoverPoint && (
         <Marker longitude={hoverPoint.lng} latitude={hoverPoint.lat} anchor="center">

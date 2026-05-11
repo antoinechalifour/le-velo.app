@@ -11,6 +11,11 @@ export type LngLat = {
   lat: number
 }
 
+export type RoutePoint = {
+  point: LngLat
+  label: string | null
+}
+
 export type Endpoint = 'start' | 'end'
 
 export type RouteStats = {

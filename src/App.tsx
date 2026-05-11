@@ -5,25 +5,22 @@ import { Sidebar } from './components/Sidebar'
 import { fetchRoutes } from './lib/brouter'
 import { useGeolocation } from './lib/geolocation'
 import { parseUrlState, serializeUrlState } from './lib/urlState'
-import type { LngLat, RoutingProfile } from './types'
+import type { LngLat, RoutePoint, RoutingProfile } from './types'
 
 const INITIAL_URL_STATE =
   typeof window !== 'undefined'
     ? parseUrlState(window.location.hash)
-    : { start: null, end: null, profile: null }
+    : { points: [], profile: null }
+
+function pointsKey(points: RoutePoint[]): string {
+  return points
+    .map((p) => `${p.point.lat.toFixed(5)},${p.point.lng.toFixed(5)}`)
+    .join('|')
+}
 
 export default function App() {
-  const [start, setStart] = useState<LngLat | null>(
-    () => INITIAL_URL_STATE.start?.point ?? null,
-  )
-  const [end, setEnd] = useState<LngLat | null>(
-    () => INITIAL_URL_STATE.end?.point ?? null,
-  )
-  const [startLabel, setStartLabel] = useState<string | null>(
-    () => INITIAL_URL_STATE.start?.label ?? null,
-  )
-  const [endLabel, setEndLabel] = useState<string | null>(
-    () => INITIAL_URL_STATE.end?.label ?? null,
+  const [points, setPoints] = useState<RoutePoint[]>(
+    () => INITIAL_URL_STATE.points,
   )
   const [profile, setProfile] = useState<RoutingProfile>(
     () => INITIAL_URL_STATE.profile ?? 'trekking',
@@ -37,30 +34,43 @@ export default function App() {
     point: LngLat
     nonce: number
   } | null>(null)
-  const [profileHover, setProfileHover] = useState<{
-    distanceM: number
-    point: LngLat
-  } | null>(null)
   const [fitRequest] = useState<{
     bounds: [LngLat, LngLat]
     nonce: number
   } | null>(() => {
-    const s = INITIAL_URL_STATE.start?.point
-    const e = INITIAL_URL_STATE.end?.point
-    if (s && e) return { bounds: [s, e], nonce: Date.now() }
-    return null
+    const pts = INITIAL_URL_STATE.points
+    if (pts.length < 2) return null
+    let minLat = Infinity
+    let minLng = Infinity
+    let maxLat = -Infinity
+    let maxLng = -Infinity
+    for (const p of pts) {
+      if (p.point.lat < minLat) minLat = p.point.lat
+      if (p.point.lng < minLng) minLng = p.point.lng
+      if (p.point.lat > maxLat) maxLat = p.point.lat
+      if (p.point.lng > maxLng) maxLng = p.point.lng
+    }
+    return {
+      bounds: [
+        { lat: minLat, lng: minLng },
+        { lat: maxLat, lng: maxLng },
+      ],
+      nonce: Date.now(),
+    }
   })
   const initialFlyFromUrlRef = useRef<LngLat | null>(
-    INITIAL_URL_STATE.start && !INITIAL_URL_STATE.end
-      ? INITIAL_URL_STATE.start.point
-      : !INITIAL_URL_STATE.start && INITIAL_URL_STATE.end
-        ? INITIAL_URL_STATE.end.point
-        : null,
+    INITIAL_URL_STATE.points.length === 1
+      ? INITIAL_URL_STATE.points[0].point
+      : null,
   )
+  const [profileHover, setProfileHover] = useState<{
+    distanceM: number
+    point: LngLat
+  } | null>(null)
   const hadDataRef = useRef(false)
 
   const geo = useGeolocation()
-  const skipGeo = !!INITIAL_URL_STATE.start || !!INITIAL_URL_STATE.end
+  const skipGeo = INITIAL_URL_STATE.points.length > 0
   const initialCenter =
     !skipGeo && geo.status === 'ready' ? geo.position : null
 
@@ -72,87 +82,62 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const hash = serializeUrlState({
-      start: start ? { point: start, label: startLabel } : null,
-      end: end ? { point: end, label: endLabel } : null,
-      profile,
-    })
+    const hash = serializeUrlState({ points, profile })
     const target = hash || window.location.pathname + window.location.search
     if (window.location.hash !== hash) {
       window.history.replaceState(null, '', target)
     }
-  }, [start, end, startLabel, endLabel, profile])
+  }, [points, profile])
 
   const routes = useQuery({
-    queryKey: ['routes', start?.lng, start?.lat, end?.lng, end?.lat, profile],
-    queryFn: () => fetchRoutes(start!, end!, profile),
-    enabled: !!start && !!end,
+    queryKey: ['routes', pointsKey(points), profile],
+    queryFn: () => fetchRoutes(points.map((p) => p.point), profile),
+    enabled: points.length >= 2,
   })
 
-  // Reset selection when a new set of routes arrives.
   useEffect(() => {
     setSelectedRouteIdx(0)
     setHighlightedSegmentIdx(null)
   }, [routes.data])
 
-  // First time we get a route, auto-expand the bottom sheet so the user sees
-  // composition / segments. Subsequent recomputes don't re-open it (so the
-  // user can keep it folded after the first peek).
   useEffect(() => {
     if (routes.data && routes.data.length > 0 && !hadDataRef.current) {
       hadDataRef.current = true
       setSheetOpen(true)
     }
-    if (!start && !end) {
+    if (points.length === 0) {
       hadDataRef.current = false
     }
-  }, [routes.data, start, end])
+  }, [routes.data, points.length])
 
   function handleMapClick(p: LngLat) {
     setHighlightedSegmentIdx(null)
-    if (!start) {
-      setStart(p)
-      setStartLabel(null)
-      return
-    }
-    if (!end) {
-      setEnd(p)
-      setEndLabel(null)
-      return
-    }
-    setStart(p)
-    setStartLabel(null)
-    setEnd(null)
-    setEndLabel(null)
+    setPoints((prev) => [...prev, { point: p, label: null }])
   }
 
-  function handleSelectStart(p: LngLat, label: string) {
-    setStart(p)
-    setStartLabel(label)
+  function handleAddPoint(p: LngLat, label: string) {
+    setPoints((prev) => [...prev, { point: p, label }])
     setFlyRequest({ point: p, nonce: Date.now() })
   }
 
-  function handleSelectEnd(p: LngLat, label: string) {
-    setEnd(p)
-    setEndLabel(label)
-    setFlyRequest({ point: p, nonce: Date.now() })
+  function handleRemovePoint(idx: number) {
+    setPoints((prev) => prev.filter((_, i) => i !== idx))
   }
 
-  function handleClearStart() {
-    setStart(null)
-    setStartLabel(null)
-  }
-
-  function handleClearEnd() {
-    setEnd(null)
-    setEndLabel(null)
+  function handleReorderPoints(fromIdx: number, toIdx: number) {
+    setPoints((prev) => {
+      if (fromIdx === toIdx) return prev
+      if (fromIdx < 0 || fromIdx >= prev.length) return prev
+      if (toIdx < 0 || toIdx >= prev.length) return prev
+      const next = prev.slice()
+      const [moved] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, moved)
+      return next
+    })
   }
 
   function handleReset() {
-    setStart(null)
-    setEnd(null)
-    setStartLabel(null)
-    setEndLabel(null)
+    setPoints([])
     setHighlightedSegmentIdx(null)
     setSelectedRouteIdx(0)
   }
@@ -163,8 +148,7 @@ export default function App() {
     <div className="relative h-full md:flex">
       <main className="absolute inset-0 md:static md:flex-1">
         <Map
-          start={start}
-          end={end}
+          points={points}
           routes={routesData}
           selectedRouteIdx={selectedRouteIdx}
           highlightedSegmentIdx={highlightedSegmentIdx}
@@ -177,10 +161,7 @@ export default function App() {
         />
       </main>
       <Sidebar
-        start={start}
-        end={end}
-        startLabel={startLabel}
-        endLabel={endLabel}
+        points={points}
         profile={profile}
         routes={routesData}
         selectedRouteIdx={selectedRouteIdx}
@@ -194,10 +175,9 @@ export default function App() {
         onProfileChange={setProfile}
         onSelectRoute={setSelectedRouteIdx}
         onHighlightSegment={setHighlightedSegmentIdx}
-        onSelectStart={handleSelectStart}
-        onSelectEnd={handleSelectEnd}
-        onClearStart={handleClearStart}
-        onClearEnd={handleClearEnd}
+        onAddPoint={handleAddPoint}
+        onRemovePoint={handleRemovePoint}
+        onReorderPoints={handleReorderPoints}
         onReset={handleReset}
       />
     </div>
