@@ -28,7 +28,3 @@ export function bandIdxAtDistance(
   }
   return null
 }
-
-export function bandMidpoint(band: SurfaceBand): number {
-  return (band.startM + band.endM) / 2
-}

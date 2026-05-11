@@ -4,7 +4,6 @@ import { pointAtDistance, type ElevationPoint } from '../route/elevation'
 import { SURFACE_META, SURFACE_ORDER } from '../route/surface'
 import {
   bandIdxAtDistance,
-  bandMidpoint,
   surfaceTotals,
   type SurfaceBand,
 } from '../route/surfaceBands'
@@ -26,43 +25,79 @@ export function SurfaceBands({
   const legend = SURFACE_ORDER.filter((c) => (totals[c] ?? 0) > 0)
   const activeIdx =
     hover !== null ? bandIdxAtDistance(bands, hover.distanceM) : null
+  const markerPct =
+    hover !== null
+      ? Math.max(0, Math.min(1, hover.distanceM / total)) * 100
+      : null
+  const activeBand = activeIdx !== null ? bands[activeIdx] : null
 
-  function hoverBand(band: SurfaceBand) {
-    const midM = bandMidpoint(band)
-    const p = pointAtDistance(profile, midM)
+  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const t = (e.clientX - rect.left) / rect.width
+    const clamped = Math.max(0, Math.min(1, t))
+    const distanceM = clamped * total
+    const p = pointAtDistance(profile, distanceM)
     if (!p) return
     setHover({ distanceM: p.distanceM, point: p.point })
   }
 
   return (
     <div className="paper-card rounded-xl p-4">
+      <div className="mb-2 flex items-baseline justify-between">
+        {activeBand ? (
+          <span className="text-[0.78rem] text-ink">
+            <span className="font-medium">
+              {SURFACE_META[activeBand.category].label}
+            </span>
+            {activeBand.rawSurface && (
+              <span className="ml-1.5 text-sepia">
+                ({activeBand.rawSurface})
+              </span>
+            )}
+            <span className="numeral ml-2 text-sepia">
+              {formatDistance((hover?.distanceM ?? 0) / 1000)}
+            </span>
+          </span>
+        ) : (
+          <span className="text-[0.78rem] italic text-sepia-soft">
+            survol pour détailler
+          </span>
+        )}
+        <span className="eyebrow-tight text-sepia-soft">Revêtement</span>
+      </div>
       <div
-        className="flex h-4 w-full overflow-hidden rounded-full border border-ink/15 bg-paper-deep"
+        className="relative h-4 w-full cursor-crosshair overflow-hidden rounded-full border border-ink/15 bg-paper-deep"
+        onMouseMove={handleMove}
         onMouseLeave={() => setHover(null)}
       >
-        {bands.map((b, idx) => {
-          const meta = SURFACE_META[b.category]
-          const title = b.rawSurface
-            ? `${meta.label} (${b.rawSurface}) — ${formatDistance(b.distanceM / 1000)}`
-            : `${meta.label} — ${formatDistance(b.distanceM / 1000)}`
-          const active = activeIdx === idx
-          return (
-            <div
-              key={idx}
-              onMouseEnter={() => hoverBand(b)}
-              style={{
-                width: `${(b.distanceM / total) * 100}%`,
-                backgroundColor: meta.color,
-                filter: active ? 'brightness(1.18)' : undefined,
-                boxShadow: active
-                  ? 'inset 0 0 0 2px rgba(28,25,23,0.85)'
-                  : undefined,
-                cursor: 'pointer',
-              }}
-              title={title}
-            />
-          )
-        })}
+        <div className="flex h-full w-full">
+          {bands.map((b, idx) => {
+            const meta = SURFACE_META[b.category]
+            return (
+              <div
+                key={idx}
+                style={{
+                  width: `${(b.distanceM / total) * 100}%`,
+                  backgroundColor: meta.color,
+                  pointerEvents: 'none',
+                }}
+              />
+            )
+          })}
+        </div>
+        {markerPct !== null && (
+          <div
+            className="pointer-events-none absolute top-0 bottom-0"
+            style={{
+              left: `${markerPct}%`,
+              transform: 'translateX(-50%)',
+              width: '2px',
+              backgroundColor: '#1c1917',
+              boxShadow:
+                '0 0 0 1px rgba(251,246,233,0.85), 0 1px 2px rgba(28,25,23,0.4)',
+            }}
+          />
+        )}
       </div>
       <ul className="mt-4 space-y-2.5">
         {legend.map((cat) => {
