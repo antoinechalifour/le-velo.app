@@ -1,24 +1,13 @@
-import {
-  SURFACE_META,
-  SURFACE_ORDER,
-  type SurfaceBand,
-  type SurfaceCategory,
-} from '../lib/segments'
-import { formatDistance } from '../lib/format'
+import { formatDistance } from '../format/format'
+import { SURFACE_META, SURFACE_ORDER } from '../route/surface'
+import { surfaceTotals, type SurfaceBand } from '../route/surfaceBands'
 
-type SurfaceBandsProps = {
-  bands: SurfaceBand[]
-}
-
-export function SurfaceBands({ bands }: SurfaceBandsProps) {
+export function SurfaceBands({ bands }: { bands: SurfaceBand[] }) {
   if (bands.length === 0) return null
   const total = bands[bands.length - 1].endM
   if (total <= 0) return null
 
-  const totals: Partial<Record<SurfaceCategory, number>> = {}
-  for (const b of bands) {
-    totals[b.category] = (totals[b.category] ?? 0) + b.distanceM
-  }
+  const totals = surfaceTotals(bands)
   const legend = SURFACE_ORDER.filter((c) => (totals[c] ?? 0) > 0)
 
   return (
@@ -54,7 +43,9 @@ export function SurfaceBands({ bands }: SurfaceBandsProps) {
               />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-slate-800">{meta.label}</span>
+                  <span className="font-medium text-slate-800">
+                    {meta.label}
+                  </span>
                   <span className="flex items-center gap-2 tabular-nums">
                     <span className="font-medium text-slate-900">
                       {((dist / total) * 100).toFixed(0)}%

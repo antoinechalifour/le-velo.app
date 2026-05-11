@@ -1,6 +1,10 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { searchAddress, type NominatimResult } from '../lib/nominatim'
-import type { LngLat } from '../types'
+import { useId, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { LngLat } from '../geo/lngLat'
+import { useClickOutside } from '../hooks/useClickOutside'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import type { NominatimResult } from '../nominatim/client'
+import { nominatimSearchQueryOptions } from '../nominatim/query'
 
 type AddressSearchProps = {
   placeholder: string
@@ -9,57 +13,21 @@ type AddressSearchProps = {
 
 export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<NominatimResult[]>([])
-  const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
   const inputId = useId()
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    const q = query.trim()
-    if (q.length < 3) {
-      const clear = setTimeout(() => {
-        setResults([])
-        setLoading(false)
-      }, 0)
-      return () => clearTimeout(clear)
-    }
-    const controller = new AbortController()
-    const timer = setTimeout(() => {
-      setLoading(true)
-      searchAddress(q, controller.signal)
-        .then((r) => {
-          setResults(r)
-          setActiveIdx(r.length > 0 ? 0 : -1)
-        })
-        .catch((err) => {
-          if (err instanceof DOMException && err.name === 'AbortError') return
-          setResults([])
-        })
-        .finally(() => setLoading(false))
-    }, 300)
-    return () => {
-      controller.abort()
-      clearTimeout(timer)
-    }
-  }, [query])
+  const debouncedQuery = useDebouncedValue(query, 300)
+  const { data: results = [], isFetching } = useQuery(
+    nominatimSearchQueryOptions(debouncedQuery),
+  )
 
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!containerRef.current) return
-      if (!containerRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
-  }, [])
+  useClickOutside(containerRef, () => setOpen(false))
 
   function pick(r: NominatimResult) {
     onSelect(r.point, r.shortLabel)
     setQuery('')
-    setResults([])
     setOpen(false)
   }
 
@@ -99,6 +67,7 @@ export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
         onChange={(e) => {
           setQuery(e.target.value)
           setOpen(true)
+          setActiveIdx(-1)
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
@@ -107,10 +76,10 @@ export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
       />
       {showDropdown && (
         <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
-          {loading && results.length === 0 && (
+          {isFetching && results.length === 0 && (
             <div className="px-3 py-2 text-xs text-slate-500">Recherche…</div>
           )}
-          {!loading && results.length === 0 && (
+          {!isFetching && results.length === 0 && (
             <div className="px-3 py-2 text-xs text-slate-500">
               Aucun résultat
             </div>

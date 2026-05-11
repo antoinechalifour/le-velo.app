@@ -1,4 +1,4 @@
-import type { LngLat } from '../types'
+import type { LngLat } from '../geo/lngLat'
 
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/search'
 

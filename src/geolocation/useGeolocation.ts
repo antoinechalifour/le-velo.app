@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { LngLat } from '../types'
+import type { LngLat } from '../geo/lngLat'
 
 type GeolocationState =
   | { status: 'idle' }
@@ -7,16 +7,19 @@ type GeolocationState =
   | { status: 'ready'; position: LngLat }
   | { status: 'error'; reason: string }
 
+function initialState(): GeolocationState {
+  if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+    return { status: 'error', reason: 'Géolocalisation non disponible' }
+  }
+  return { status: 'pending' }
+}
+
 export function useGeolocation(): GeolocationState {
-  const [state, setState] = useState<GeolocationState>({ status: 'idle' })
+  const [state, setState] = useState<GeolocationState>(initialState)
 
   useEffect(() => {
-    if (!('geolocation' in navigator)) {
-      setState({ status: 'error', reason: 'Géolocalisation non disponible' })
-      return
-    }
+    if (state.status !== 'pending') return
     let cancelled = false
-    setState({ status: 'pending' })
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         if (cancelled) return
@@ -34,7 +37,7 @@ export function useGeolocation(): GeolocationState {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [state.status])
 
   return state
 }

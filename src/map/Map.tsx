@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useAtomValue, useSetAtom } from 'jotai'
 import {
   Map as MapLibre,
   Marker,
@@ -9,21 +10,14 @@ import {
 } from 'react-map-gl/maplibre'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import type { Feature, FeatureCollection, LineString } from 'geojson'
-import type { LngLat, RoutePoint, RouteResult } from '../types'
-import { CATEGORY_META, CATEGORY_ORDER } from '../lib/segments'
-
-type MapProps = {
-  points: RoutePoint[]
-  routes: RouteResult[]
-  selectedRouteIdx: number
-  highlightedSegmentIdx: number | null
-  initialCenter: LngLat | null
-  flyRequest: { point: LngLat; nonce: number } | null
-  fitRequest: { bounds: [LngLat, LngLat]; nonce: number } | null
-  hoverPoint: LngLat | null
-  onMapClick: (lngLat: LngLat) => void
-  onSelectRoute: (idx: number) => void
-}
+import { useRoutesQuery } from '../brouter/query'
+import type { LngLat } from '../geo/lngLat'
+import { pointRole, ROLE_META, roleLetter } from '../route/pointRole'
+import { CATEGORY_META, CATEGORY_ORDER } from '../route/segmentCategory'
+import { cameraCommandAtom } from '../state/camera'
+import { highlightedSegmentIdxAtom } from '../state/highlight'
+import { profileHoverAtom } from '../state/hover'
+import { usePointsParam, useSelectedRouteParam } from '../url/params'
 
 const FRANCE_VIEW = {
   longitude: 2.5,
@@ -62,27 +56,29 @@ function buildCategoryColorExpression(): ExpressionSpecification {
 
 const ALT_LAYER_ID = 'route-alternatives-line'
 
-export function Map({
-  points,
-  routes,
-  selectedRouteIdx,
-  highlightedSegmentIdx,
-  initialCenter,
-  flyRequest,
-  fitRequest,
-  hoverPoint,
-  onMapClick,
-  onSelectRoute,
-}: MapProps) {
+export function Map() {
+  const [points, setPoints] = usePointsParam()
+  const [selectedRouteIdx, setSelectedRouteIdx] = useSelectedRouteParam()
+  const { data } = useRoutesQuery()
+  const routes = useMemo(() => data ?? [], [data])
+  const clampedIdx =
+    routes.length > 0
+      ? Math.min(Math.max(selectedRouteIdx, 0), routes.length - 1)
+      : 0
+
+  const highlightedSegmentIdx = useAtomValue(highlightedSegmentIdxAtom)
+  const setHighlightedSegmentIdx = useSetAtom(highlightedSegmentIdxAtom)
+  const hover = useAtomValue(profileHoverAtom)
+  const cameraCommand = useAtomValue(cameraCommandAtom)
+
   const mapRef = useRef<MapRef | null>(null)
-  const hasFlownToUserRef = useRef(false)
 
   const colorExpression = useMemo(() => buildCategoryColorExpression(), [])
 
   const alternativesGeoJson = useMemo<FeatureCollection>(() => {
     const features: Feature<LineString>[] = []
     routes.forEach((r, idx) => {
-      if (idx === selectedRouteIdx) return
+      if (idx === clampedIdx) return
       const f = r.geojson.features?.[0]
       if (!f || f.geometry?.type !== 'LineString') return
       features.push({
@@ -92,10 +88,9 @@ export function Map({
       })
     })
     return { type: 'FeatureCollection', features }
-  }, [routes, selectedRouteIdx])
+  }, [routes, clampedIdx])
 
-  const selectedSegmentsGeoJson =
-    routes[selectedRouteIdx]?.segmentsGeoJson ?? null
+  const selectedSegmentsGeoJson = routes[clampedIdx]?.segmentsGeoJson ?? null
 
   const handleClick = useCallback(
     (e: MapMouseEvent) => {
@@ -104,63 +99,50 @@ export function Map({
       if (altFeature) {
         const idx = altFeature.properties?.routeIdx
         if (typeof idx === 'number') {
-          onSelectRoute(idx)
+          setSelectedRouteIdx(idx)
           return
         }
       }
-      onMapClick({ lng: e.lngLat.lng, lat: e.lngLat.lat })
+      setHighlightedSegmentIdx(null)
+      setPoints((prev) => [
+        ...prev,
+        { point: { lng: e.lngLat.lng, lat: e.lngLat.lat }, label: null },
+      ])
     },
-    [onMapClick, onSelectRoute],
+    [setHighlightedSegmentIdx, setPoints, setSelectedRouteIdx],
   )
 
   useEffect(() => {
-    if (hasFlownToUserRef.current) return
-    if (!initialCenter) return
+    if (!cameraCommand) return
     const map = mapRef.current
     if (!map) return
-    hasFlownToUserRef.current = true
-    map.flyTo({
-      center: [initialCenter.lng, initialCenter.lat],
-      zoom: 12,
-      duration: 1500,
-      essential: true,
-    })
-  }, [initialCenter])
+    if (cameraCommand.type === 'flyTo') {
+      const current = map.getZoom()
+      map.flyTo({
+        center: [cameraCommand.point.lng, cameraCommand.point.lat],
+        zoom: Math.max(current, cameraCommand.zoom ?? 12),
+        duration: 1200,
+        essential: true,
+      })
+    } else {
+      const [a, b] = cameraCommand.bbox
+      const sw: [number, number] = [
+        Math.min(a.lng, b.lng),
+        Math.min(a.lat, b.lat),
+      ]
+      const ne: [number, number] = [
+        Math.max(a.lng, b.lng),
+        Math.max(a.lat, b.lat),
+      ]
+      map.fitBounds([sw, ne], {
+        padding: 80,
+        duration: 1000,
+        maxZoom: 13,
+      })
+    }
+  }, [cameraCommand])
 
-  useEffect(() => {
-    if (!flyRequest) return
-    const map = mapRef.current
-    if (!map) return
-    hasFlownToUserRef.current = true
-    const current = map.getZoom()
-    map.flyTo({
-      center: [flyRequest.point.lng, flyRequest.point.lat],
-      zoom: Math.max(current, 12),
-      duration: 1200,
-      essential: true,
-    })
-  }, [flyRequest])
-
-  useEffect(() => {
-    if (!fitRequest) return
-    const map = mapRef.current
-    if (!map) return
-    hasFlownToUserRef.current = true
-    const [a, b] = fitRequest.bounds
-    const sw: [number, number] = [
-      Math.min(a.lng, b.lng),
-      Math.min(a.lat, b.lat),
-    ]
-    const ne: [number, number] = [
-      Math.max(a.lng, b.lng),
-      Math.max(a.lat, b.lat),
-    ]
-    map.fitBounds([sw, ne], {
-      padding: 80,
-      duration: 1000,
-      maxZoom: 13,
-    })
-  }, [fitRequest])
+  const hoverPoint: LngLat | null = hover?.point ?? null
 
   return (
     <MapLibre
@@ -172,14 +154,7 @@ export function Map({
       style={{ width: '100%', height: '100%' }}
     >
       {points.map((p, idx) => {
-        const isFirst = idx === 0
-        const isLast = idx === points.length - 1 && points.length > 1
-        const color = isFirst ? '#16a34a' : isLast ? '#dc2626' : '#2563eb'
-        const label = isFirst
-          ? 'A'
-          : isLast
-            ? 'B'
-            : String(idx + 1)
+        const role = pointRole(idx, points.length)
         return (
           <Marker
             key={`pt-${idx}-${p.point.lat}-${p.point.lng}`}
@@ -187,13 +162,17 @@ export function Map({
             latitude={p.point.lat}
             anchor="bottom"
           >
-            <Pin color={color} label={label} />
+            <Pin color={ROLE_META[role].color} label={roleLetter(role, idx)} />
           </Marker>
         )
       })}
 
       {hoverPoint && (
-        <Marker longitude={hoverPoint.lng} latitude={hoverPoint.lat} anchor="center">
+        <Marker
+          longitude={hoverPoint.lng}
+          latitude={hoverPoint.lat}
+          anchor="center"
+        >
           <HoverDot />
         </Marker>
       )}

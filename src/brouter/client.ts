@@ -1,61 +1,12 @@
 import type { FeatureCollection } from 'geojson'
-import type {
-  LngLat,
-  RouteResult,
-  RouteStats,
-  RoutingProfile,
-} from '../types'
-import { buildSegments } from './segments'
-import { buildElevationProfile } from './elevation'
-
-const BROUTER_BASE = 'https://brouter.de/brouter'
-
-type BrouterFormat = 'geojson' | 'gpx'
-
-export function buildBrouterUrl(
-  points: LngLat[],
-  profile: string,
-  format: BrouterFormat,
-  alternativeIdx = 0,
-): string {
-  const lonlats = points.map((p) => `${p.lng},${p.lat}`).join('|')
-  const params = new URLSearchParams({
-    lonlats,
-    profile,
-    alternativeidx: String(alternativeIdx),
-    format,
-  })
-  return `${BROUTER_BASE}?${params.toString()}`
-}
-
-type BrouterMessage = [string, string, string, string, string, string, string]
-
-type BrouterTrackProps = {
-  creator?: string
-  name?: string
-  'track-length'?: string
-  'filtered ascend'?: string
-  'plain-ascend'?: string
-  'total-time'?: string
-  'total-energy'?: string
-  cost?: string
-  messages?: BrouterMessage[]
-  times?: number[]
-}
-
-function parseStats(props: BrouterTrackProps): RouteStats {
-  const distanceM = Number(props['track-length'] ?? 0)
-  const ascentM = Number(props['filtered ascend'] ?? 0)
-  const plainAscentM = Number(props['plain-ascend'] ?? 0)
-  const descentM = Math.max(0, ascentM - plainAscentM)
-  const durationS = Number(props['total-time'] ?? 0)
-  return {
-    distanceKm: distanceM / 1000,
-    ascentM,
-    descentM,
-    durationMin: durationS / 60,
-  }
-}
+import type { LngLat } from '../geo/lngLat'
+import { buildElevationProfile } from '../route/elevation'
+import type { RoutingProfile } from '../route/profile'
+import type { RouteResult } from '../route/route'
+import { buildSegments } from '../route/segments'
+import { parseStats } from './parse'
+import type { BrouterTrackProps } from './types'
+import { buildBrouterUrl } from './url'
 
 async function fetchSingleRoute(
   points: LngLat[],
@@ -105,7 +56,6 @@ export async function fetchRoutes(
     if (s.status === 'fulfilled') results.push(s.value)
   }
   if (results.length === 0) {
-    // Surface the first failure so the UI can show an error.
     const firstReject = settled.find((s) => s.status === 'rejected')
     if (firstReject && firstReject.status === 'rejected') {
       throw firstReject.reason instanceof Error
