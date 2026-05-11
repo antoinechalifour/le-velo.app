@@ -1,14 +1,6 @@
 import { z } from 'zod'
 
-export const brouterMessageSchema = z.tuple([
-  z.string(),
-  z.string(),
-  z.string(),
-  z.string(),
-  z.string(),
-  z.string(),
-  z.string(),
-])
+export const brouterMessageSchema = z.array(z.string())
 
 export const brouterTrackPropsSchema = z.object({
   creator: z.string().optional(),
