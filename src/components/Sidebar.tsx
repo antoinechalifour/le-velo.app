@@ -93,10 +93,15 @@ export function Sidebar({
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5 pt-2 md:pt-5">
         <header className="hidden md:block">
-          <h1 className="text-xl font-semibold text-slate-900">Velo Maps</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Itinéraires vélo orientés voies cyclables référencées (OSM +
-            BRouter).
+          <div className="flex items-center gap-2.5">
+            <Logo className="h-7 w-7" />
+            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+              Le Vélo
+            </h1>
+          </div>
+          <p className="mt-2 text-sm text-slate-500">
+            Itinéraires vélo qui suivent les voies cyclables référencées —
+            OSM + BRouter.
           </p>
         </header>
 
@@ -285,8 +290,55 @@ function PeekText({ status }: { status: PeekStatus }) {
   }
   return (
     <div className="min-w-0 flex-1 text-sm font-medium text-slate-700">
-      Velo Maps
+      Le Vélo
     </div>
+  )
+}
+
+function Logo({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      fill="none"
+      className={`shrink-0 ${className}`}
+      aria-hidden="true"
+    >
+      <circle cx="16" cy="44" r="12" stroke="#16a34a" strokeWidth="4" />
+      <circle cx="48" cy="44" r="12" stroke="#16a34a" strokeWidth="4" />
+      <path
+        d="M16 44 L29 22 L33 44 Z"
+        stroke="#0f172a"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        d="M29 22 L45 22 L33 44"
+        stroke="#0f172a"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        d="M45 22 L48 44"
+        stroke="#0f172a"
+        strokeWidth="3.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        d="M24 22 L33 22"
+        stroke="#0f172a"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M42 22 L50 20"
+        stroke="#0f172a"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
   )
 }
 

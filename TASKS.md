@@ -1,4 +1,4 @@
-# Velo Maps — Tâches à venir
+# Le Vélo — Tâches à venir
 
 Liste des améliorations identifiées au-delà du MVP. Voir [CADRAGE.md](./CADRAGE.md) pour le contexte général.
 

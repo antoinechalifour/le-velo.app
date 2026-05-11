@@ -1,4 +1,4 @@
-# Velo Maps
+# Le Vélo
 
 Web app de calcul d'itinéraires vélo en France, qui privilégie les voies cyclables référencées dans OpenStreetMap (EuroVélo, ViaRhôna, voies vertes régionales, etc.) — là où Google Maps a tendance à proposer des voies rapides ou des détours inadaptés.
 
@@ -86,4 +86,4 @@ src/
 
 ## Inspiration
 
-[cycle.travel](https://cycle.travel/) reste l'état de l'art du genre — moteur de routage maison, tuiles custom, contenu éditorial. Velo Maps est un projet beaucoup plus modeste qui mise sur l'écosystème existant (BRouter + OSM) plutôt que sur du pré-traitement custom.
+[cycle.travel](https://cycle.travel/) reste l'état de l'art du genre — moteur de routage maison, tuiles custom, contenu éditorial. Le Vélo est un projet beaucoup plus modeste qui mise sur l'écosystème existant (BRouter + OSM) plutôt que sur du pré-traitement custom.

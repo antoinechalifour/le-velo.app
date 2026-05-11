@@ -1,4 +1,4 @@
-# Velo Maps — Document de cadrage
+# Le Vélo — Document de cadrage
 
 ## 1. Contexte & problème
 
