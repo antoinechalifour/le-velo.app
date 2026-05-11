@@ -156,6 +156,25 @@ body {
   transform-origin: 50% 50%;
 }
 
+@keyframes pedal-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pedal-counter-spin {
+  to { transform: rotate(-360deg); }
+}
+.pedal-cranks {
+  animation: pedal-spin 1.8s linear infinite;
+}
+.pedal-counter {
+  animation: pedal-counter-spin 1.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pedal-cranks,
+  .pedal-counter {
+    animation: none;
+  }
+}
+
 /* Ink wash — a tinted band that sweeps from left like ink soaking into paper. */
 .ink-wash {
   position: relative;

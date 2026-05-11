@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Bike } from 'lucide-react'
+import { Bike, LocateFixed } from 'lucide-react'
 import {
   Map as MapLibre,
   Marker,
   Source,
   Layer,
+  type MapLayerTouchEvent,
   type MapMouseEvent,
   type MapRef,
+  type ViewStateChangeEvent,
 } from 'react-map-gl/maplibre'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import type { Feature, FeatureCollection, LineString } from 'geojson'
 import { useRoutesQuery } from '../brouter/query'
 import { bboxOf } from '../geo/bbox'
 import type { LngLat } from '../geo/lngLat'
+import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import type { RoutePoint } from '../route/point'
+import { PedalLoader } from './PedalLoader'
 import {
   pointRole,
   ROLE_META,
@@ -24,6 +28,7 @@ import {
 import { CATEGORY_META, CATEGORY_ORDER } from '../route/segmentCategory'
 import { segmentIdxAtDistance } from '../route/segments'
 import { cameraCommandAtom } from '../state/camera'
+import { followModeAtom } from '../state/followMode'
 import { routeHoverAtom } from '../state/hover'
 import { userLocationAtom } from '../state/userLocation'
 import { usePointsParam, useSelectedRouteParam } from '../url/params'
@@ -106,8 +111,9 @@ const ALT_LAYER_ID = 'route-alternatives-line'
 export function Map() {
   const [points, setPoints] = usePointsParam()
   const [selectedRouteIdx, setSelectedRouteIdx] = useSelectedRouteParam()
-  const { data } = useRoutesQuery()
+  const { data, isFetching } = useRoutesQuery()
   const routes = useMemo(() => data ?? [], [data])
+  const showLoader = useDebouncedValue(isFetching, 300) && isFetching
   const clampedIdx =
     routes.length > 0
       ? Math.min(Math.max(selectedRouteIdx, 0), routes.length - 1)
@@ -117,6 +123,11 @@ export function Map() {
   const cameraCommand = useAtomValue(cameraCommandAtom)
   const userLocation = useAtomValue(userLocationAtom)
   const setUserLocation = useSetAtom(userLocationAtom)
+  const [followMode, setFollowMode] = useAtom(followModeAtom)
+  const followModeRef = useRef(followMode)
+  useEffect(() => {
+    followModeRef.current = followMode
+  }, [followMode])
   const cursorLngLatRef = useRef<LngLat | null>(null)
 
   const selectedRoute = routes[clampedIdx] ?? null
@@ -127,6 +138,26 @@ export function Map() {
 
   const mapRef = useRef<MapRef | null>(null)
   const [initialView] = useState(() => initialViewFromPoints(points))
+
+  const longPressTimerRef = useRef<number | null>(null)
+  const longPressStartRef = useRef<{
+    x: number
+    y: number
+    lng: number
+    lat: number
+  } | null>(null)
+  const longPressFiredRef = useRef(false)
+  const touchSessionRef = useRef(false)
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    longPressStartRef.current = null
+  }, [])
+
+  useEffect(() => () => clearLongPress(), [clearLongPress])
 
   const colorExpression = useMemo(() => buildCategoryColorExpression(), [])
 
@@ -158,6 +189,11 @@ export function Map() {
           return
         }
       }
+      if (longPressFiredRef.current) {
+        longPressFiredRef.current = false
+        return
+      }
+      if (touchSessionRef.current) return
       setPoints((prev) => [
         ...prev,
         { point: { lng: e.lngLat.lng, lat: e.lngLat.lat }, label: null },
@@ -165,6 +201,55 @@ export function Map() {
     },
     [setPoints, setSelectedRouteIdx],
   )
+
+  const handleTouchStart = useCallback(
+    (e: MapLayerTouchEvent) => {
+      touchSessionRef.current = true
+      longPressFiredRef.current = false
+      clearLongPress()
+      const touches = e.originalEvent?.touches
+      if (touches && touches.length !== 1) return
+      const start = {
+        x: e.point.x,
+        y: e.point.y,
+        lng: e.lngLat.lng,
+        lat: e.lngLat.lat,
+      }
+      longPressStartRef.current = start
+      longPressTimerRef.current = window.setTimeout(() => {
+        longPressFiredRef.current = true
+        longPressTimerRef.current = null
+        longPressStartRef.current = null
+        setPoints((prev) => [
+          ...prev,
+          { point: { lng: start.lng, lat: start.lat }, label: null },
+        ])
+        if (typeof navigator.vibrate === 'function') navigator.vibrate(20)
+      }, 500)
+    },
+    [clearLongPress, setPoints],
+  )
+
+  const handleTouchMove = useCallback((e: MapLayerTouchEvent) => {
+    const start = longPressStartRef.current
+    if (!start) return
+    const dx = e.point.x - start.x
+    const dy = e.point.y - start.y
+    if (dx * dx + dy * dy > 100) {
+      if (longPressTimerRef.current !== null) {
+        window.clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+      longPressStartRef.current = null
+    }
+  }, [])
+
+  const handleTouchEnd = useCallback(() => {
+    clearLongPress()
+    window.setTimeout(() => {
+      touchSessionRef.current = false
+    }, 50)
+  }, [clearLongPress])
 
   const handleMouseMove = useCallback(
     (e: MapMouseEvent) => {
@@ -224,6 +309,43 @@ export function Map() {
   }, [setUserLocation])
 
   useEffect(() => {
+    if (!followModeRef.current) return
+    if (!userLocation) return
+    const map = mapRef.current
+    if (!map) return
+    map.easeTo({
+      center: [userLocation.lng, userLocation.lat],
+      duration: 700,
+    })
+  }, [userLocation])
+
+  const handleMoveStart = useCallback(
+    (e: ViewStateChangeEvent) => {
+      if (!followModeRef.current) return
+      if (!e.originalEvent) return
+      setFollowMode(false)
+    },
+    [setFollowMode],
+  )
+
+  const handleFollowToggle = useCallback(() => {
+    if (followMode) {
+      setFollowMode(false)
+      return
+    }
+    setFollowMode(true)
+    if (!userLocation) return
+    const map = mapRef.current
+    if (!map) return
+    const currentZoom = map.getZoom()
+    map.easeTo({
+      center: [userLocation.lng, userLocation.lat],
+      zoom: Math.max(currentZoom, 15),
+      duration: 900,
+    })
+  }, [followMode, userLocation, setFollowMode])
+
+  useEffect(() => {
     if (!cameraCommand) return
     const map = mapRef.current
     if (!map) return
@@ -256,6 +378,7 @@ export function Map() {
   const hoverPoint: LngLat | null = hover?.point ?? null
 
   return (
+    <div className="relative h-full w-full">
     <MapLibre
       ref={mapRef}
       initialViewState={initialView}
@@ -263,6 +386,11 @@ export function Map() {
       onClick={handleClick}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      onMoveStart={handleMoveStart}
       interactiveLayerIds={[ALT_LAYER_ID]}
       style={{ width: '100%', height: '100%', backgroundColor: '#efe6d2' }}
     >
@@ -394,6 +522,36 @@ export function Map() {
         </Source>
       )}
     </MapLibre>
+      {userLocation && (
+        <FollowButton active={followMode} onClick={handleFollowToggle} />
+      )}
+      <RouteLoaderOverlay visible={showLoader} />
+    </div>
+  )
+}
+
+function RouteLoaderOverlay({ visible }: { visible: boolean }) {
+  return (
+    <div
+      aria-hidden={!visible}
+      className={`pointer-events-none absolute inset-0 z-20 flex items-center justify-center transition-opacity ${
+        visible ? 'opacity-100' : 'opacity-0'
+      }`}
+      style={{
+        transitionDuration: 'var(--dur-flow)',
+        background:
+          'radial-gradient(circle at center, rgba(251,246,233,0.92) 0%, rgba(251,246,233,0.55) 30%, rgba(251,246,233,0.2) 60%, rgba(251,246,233,0) 85%)',
+      }}
+    >
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex h-48 w-48 flex-col items-center justify-center gap-3 rounded-full"
+      >
+        <PedalLoader className="h-20 w-20 text-ink" />
+        <span className="eyebrow text-sepia">Tracé en cours…</span>
+      </div>
+    </div>
   )
 }
 
@@ -452,6 +610,67 @@ function HoverDot() {
       className="h-3.5 w-3.5 rounded-full border-2 border-paper-soft shadow-md"
       style={{ backgroundColor: '#b8501a' }}
     />
+  )
+}
+
+function FollowButton({
+  active,
+  onClick,
+}: {
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <div className="pointer-events-none absolute right-4 bottom-[6.5rem] z-10 flex items-center md:right-6 md:bottom-6">
+      {active && (
+        <span
+          aria-hidden
+          className="eyebrow-tight mr-2 hidden whitespace-nowrap rounded-sm px-2 py-[3px] sm:inline-block"
+          style={{
+            fontSize: '0.6rem',
+            letterSpacing: '0.2em',
+            color: 'var(--color-forest-deep)',
+            backgroundColor: 'var(--color-paper-soft)',
+            border: '1px solid var(--color-forest)',
+            boxShadow:
+              '0 2px 4px -1px rgba(28,25,23,0.30), inset 0 0 0 1px rgba(251,246,233,0.65)',
+          }}
+        >
+          En selle
+        </span>
+      )}
+      <div className="pointer-events-auto relative">
+        {active && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-full bg-forest opacity-50 animate-ping"
+          />
+        )}
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={
+            active
+              ? 'Désactiver le suivi de position'
+              : 'Activer le suivi de position'
+          }
+          aria-pressed={active}
+          title={active ? 'Suivi actif' : 'Centrer sur ma position'}
+          className={`
+            focus-ring relative flex h-11 w-11 items-center justify-center
+            rounded-full shadow-[0_3px_6px_-1px_rgba(28,25,23,0.45)]
+            transition-colors duration-300
+            ${
+              active
+                ? 'bg-forest text-paper-soft ring-[3px] ring-paper-soft'
+                : 'border border-ink/20 bg-paper-soft text-sepia hover:text-ink'
+            }
+          `}
+        >
+          <LocateFixed size={18} strokeWidth={2.25} />
+        </button>
+      </div>
+    </div>
   )
 }
 
