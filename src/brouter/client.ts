@@ -1,11 +1,11 @@
-import type { FeatureCollection } from 'geojson'
+import ky from 'ky'
 import type { LngLat } from '../geo/lngLat'
 import { buildElevationProfile } from '../route/elevation'
 import type { RoutingProfile } from '../route/profile'
 import type { RouteResult } from '../route/route'
 import { buildSegments } from '../route/segments'
 import { parseStats } from './parse'
-import type { BrouterTrackProps } from './types'
+import { brouterResponseSchema } from './types'
 import { buildBrouterUrl } from './url'
 
 async function fetchSingleRoute(
@@ -14,14 +14,10 @@ async function fetchSingleRoute(
   alternativeIdx: number,
 ): Promise<RouteResult> {
   const url = buildBrouterUrl(points, profile, 'geojson', alternativeIdx)
-  const res = await fetch(url)
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`BRouter ${res.status}: ${text.slice(0, 200)}`)
-  }
-  const geojson = (await res.json()) as FeatureCollection
-  const feature = geojson.features?.[0]
-  const props = (feature?.properties ?? {}) as BrouterTrackProps
+  const json = await ky.get(url).json()
+  const geojson = brouterResponseSchema.parse(json)
+  const feature = geojson.features[0]
+  const props = feature?.properties ?? {}
   const { segments, segmentsGeoJson, breakdown, surfaceBands } =
     buildSegments(geojson)
   const elevationProfile = buildElevationProfile(geojson)
