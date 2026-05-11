@@ -19,6 +19,7 @@ type MapProps = {
   selectedRouteIdx: number
   highlightedSegmentIdx: number | null
   initialCenter: LngLat | null
+  flyRequest: { point: LngLat; nonce: number } | null
   onMapClick: (lngLat: LngLat) => void
   onSelectRoute: (idx: number) => void
 }
@@ -67,6 +68,7 @@ export function Map({
   selectedRouteIdx,
   highlightedSegmentIdx,
   initialCenter,
+  flyRequest,
   onMapClick,
   onSelectRoute,
 }: MapProps) {
@@ -122,6 +124,20 @@ export function Map({
       essential: true,
     })
   }, [initialCenter])
+
+  useEffect(() => {
+    if (!flyRequest) return
+    const map = mapRef.current
+    if (!map) return
+    hasFlownToUserRef.current = true
+    const current = map.getZoom()
+    map.flyTo({
+      center: [flyRequest.point.lng, flyRequest.point.lat],
+      zoom: Math.max(current, 12),
+      duration: 1200,
+      essential: true,
+    })
+  }, [flyRequest])
 
   return (
     <MapLibre

@@ -10,10 +10,13 @@ import {
   type BreakdownEntry,
   type Segment,
 } from '../lib/segments'
+import { AddressSearch } from './AddressSearch'
 
 type SidebarProps = {
   start: LngLat | null
   end: LngLat | null
+  startLabel: string | null
+  endLabel: string | null
   profile: RoutingProfile
   routes: RouteResult[]
   selectedRouteIdx: number
@@ -25,6 +28,10 @@ type SidebarProps = {
   onProfileChange: (profile: RoutingProfile) => void
   onSelectRoute: (idx: number) => void
   onHighlightSegment: (idx: number | null) => void
+  onSelectStart: (point: LngLat, label: string) => void
+  onSelectEnd: (point: LngLat, label: string) => void
+  onClearStart: () => void
+  onClearEnd: () => void
   onReset: () => void
 }
 
@@ -33,6 +40,8 @@ const PEEK_HEIGHT = '5.5rem'
 export function Sidebar({
   start,
   end,
+  startLabel,
+  endLabel,
   profile,
   routes,
   selectedRouteIdx,
@@ -44,6 +53,10 @@ export function Sidebar({
   onProfileChange,
   onSelectRoute,
   onHighlightSegment,
+  onSelectStart,
+  onSelectEnd,
+  onClearStart,
+  onClearEnd,
   onReset,
 }: SidebarProps) {
   const selectedRoute = routes[selectedRouteIdx] ?? null
@@ -87,29 +100,26 @@ export function Sidebar({
 
         <ProfilePicker value={profile} onChange={onProfileChange} />
 
-        <Step
+        <AddressField
           index={1}
           label="Point de départ"
           active={!start}
-          value={formatPoint(start)}
+          point={start}
+          pointLabel={startLabel}
+          placeholder="Saisir une adresse de départ…"
+          onSelect={onSelectStart}
+          onClear={onClearStart}
         />
-        <Step
+        <AddressField
           index={2}
           label="Point d'arrivée"
           active={!!start && !end}
-          value={formatPoint(end)}
+          point={end}
+          pointLabel={endLabel}
+          placeholder="Saisir une adresse d'arrivée…"
+          onSelect={onSelectEnd}
+          onClear={onClearEnd}
         />
-
-        {!start && (
-          <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-600">
-            Cliquez sur la carte pour poser le point de départ.
-          </p>
-        )}
-        {start && !end && (
-          <p className="rounded-md bg-slate-50 p-3 text-sm text-slate-600">
-            Cliquez sur la carte pour poser le point d'arrivée.
-          </p>
-        )}
 
         {isFetching && (
           <p className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
@@ -396,44 +406,76 @@ function Alternatives({
   )
 }
 
-function Step({
+function AddressField({
   index,
   label,
   active,
-  value,
+  point,
+  pointLabel,
+  placeholder,
+  onSelect,
+  onClear,
 }: {
   index: number
   label: string
   active: boolean
-  value: string | null
+  point: LngLat | null
+  pointLabel: string | null
+  placeholder: string
+  onSelect: (point: LngLat, label: string) => void
+  onClear: () => void
 }) {
+  const hasValue = !!point
+  const displayValue = pointLabel ?? formatPoint(point)
   return (
     <div
-      className={`flex items-start gap-3 rounded-md border p-3 ${
+      className={`rounded-md border p-3 ${
         active
           ? 'border-blue-300 bg-blue-50'
-          : value
+          : hasValue
             ? 'border-slate-200 bg-white'
             : 'border-slate-200 bg-slate-50/50'
       }`}
     >
-      <div
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-          value
-            ? 'bg-slate-900 text-white'
-            : active
-              ? 'bg-blue-600 text-white'
-              : 'bg-slate-200 text-slate-500'
-        }`}
-      >
-        {index}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          {label}
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+            hasValue
+              ? 'bg-slate-900 text-white'
+              : active
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-200 text-slate-500'
+          }`}
+        >
+          {index}
         </div>
-        <div className="mt-0.5 truncate text-sm text-slate-900">
-          {value ?? '—'}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              {label}
+            </span>
+            {hasValue && (
+              <button
+                type="button"
+                onClick={onClear}
+                className="text-xs font-medium text-slate-500 hover:text-slate-900"
+              >
+                Effacer
+              </button>
+            )}
+          </div>
+          {hasValue ? (
+            <div className="mt-0.5 truncate text-sm text-slate-900">
+              {displayValue}
+            </div>
+          ) : (
+            <div className="mt-1.5 space-y-1">
+              <AddressSearch placeholder={placeholder} onSelect={onSelect} />
+              <p className="text-[11px] text-slate-500">
+                ou cliquez sur la carte
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

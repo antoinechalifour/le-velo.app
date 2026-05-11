@@ -9,12 +9,18 @@ import type { LngLat, RoutingProfile } from './types'
 export default function App() {
   const [start, setStart] = useState<LngLat | null>(null)
   const [end, setEnd] = useState<LngLat | null>(null)
+  const [startLabel, setStartLabel] = useState<string | null>(null)
+  const [endLabel, setEndLabel] = useState<string | null>(null)
   const [profile, setProfile] = useState<RoutingProfile>('trekking')
   const [selectedRouteIdx, setSelectedRouteIdx] = useState(0)
   const [highlightedSegmentIdx, setHighlightedSegmentIdx] = useState<
     number | null
   >(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [flyRequest, setFlyRequest] = useState<{
+    point: LngLat
+    nonce: number
+  } | null>(null)
   const hadDataRef = useRef(false)
 
   const geo = useGeolocation()
@@ -49,19 +55,47 @@ export default function App() {
     setHighlightedSegmentIdx(null)
     if (!start) {
       setStart(p)
+      setStartLabel(null)
       return
     }
     if (!end) {
       setEnd(p)
+      setEndLabel(null)
       return
     }
     setStart(p)
+    setStartLabel(null)
     setEnd(null)
+    setEndLabel(null)
+  }
+
+  function handleSelectStart(p: LngLat, label: string) {
+    setStart(p)
+    setStartLabel(label)
+    setFlyRequest({ point: p, nonce: Date.now() })
+  }
+
+  function handleSelectEnd(p: LngLat, label: string) {
+    setEnd(p)
+    setEndLabel(label)
+    setFlyRequest({ point: p, nonce: Date.now() })
+  }
+
+  function handleClearStart() {
+    setStart(null)
+    setStartLabel(null)
+  }
+
+  function handleClearEnd() {
+    setEnd(null)
+    setEndLabel(null)
   }
 
   function handleReset() {
     setStart(null)
     setEnd(null)
+    setStartLabel(null)
+    setEndLabel(null)
     setHighlightedSegmentIdx(null)
     setSelectedRouteIdx(0)
   }
@@ -78,6 +112,7 @@ export default function App() {
           selectedRouteIdx={selectedRouteIdx}
           highlightedSegmentIdx={highlightedSegmentIdx}
           initialCenter={initialCenter}
+          flyRequest={flyRequest}
           onMapClick={handleMapClick}
           onSelectRoute={setSelectedRouteIdx}
         />
@@ -85,6 +120,8 @@ export default function App() {
       <Sidebar
         start={start}
         end={end}
+        startLabel={startLabel}
+        endLabel={endLabel}
         profile={profile}
         routes={routesData}
         selectedRouteIdx={selectedRouteIdx}
@@ -96,6 +133,10 @@ export default function App() {
         onProfileChange={setProfile}
         onSelectRoute={setSelectedRouteIdx}
         onHighlightSegment={setHighlightedSegmentIdx}
+        onSelectStart={handleSelectStart}
+        onSelectEnd={handleSelectEnd}
+        onClearStart={handleClearStart}
+        onClearEnd={handleClearEnd}
         onReset={handleReset}
       />
     </div>
