@@ -14,7 +14,7 @@ async function fetchSingleRoute(
   alternativeIdx: number,
 ): Promise<RouteResult> {
   const url = buildBrouterUrl(points, profile, 'geojson', alternativeIdx)
-  const json = await ky.get(url).json()
+  const json = await ky.get(url, { timeout: false }).json()
   const geojson = brouterResponseSchema.parse(json)
   const feature = geojson.features[0]
   const props = feature?.properties ?? {}
