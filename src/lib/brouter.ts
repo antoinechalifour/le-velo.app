@@ -6,6 +6,7 @@ import type {
   RoutingProfile,
 } from '../types'
 import { buildSegments } from './segments'
+import { buildElevationProfile } from './elevation'
 
 const BROUTER_BASE = 'https://brouter.de/brouter'
 
@@ -73,12 +74,14 @@ async function fetchSingleRoute(
   const feature = geojson.features?.[0]
   const props = (feature?.properties ?? {}) as BrouterTrackProps
   const { segments, segmentsGeoJson, breakdown } = buildSegments(geojson)
+  const elevationProfile = buildElevationProfile(geojson)
   return {
     alternativeIdx,
     geojson,
     segmentsGeoJson,
     segments,
     breakdown,
+    elevationProfile,
     stats: parseStats(props),
     rawGpxUrl: buildBrouterUrl(start, end, profile, 'gpx', alternativeIdx),
   }

@@ -21,6 +21,7 @@ type MapProps = {
   initialCenter: LngLat | null
   flyRequest: { point: LngLat; nonce: number } | null
   fitRequest: { bounds: [LngLat, LngLat]; nonce: number } | null
+  hoverPoint: LngLat | null
   onMapClick: (lngLat: LngLat) => void
   onSelectRoute: (idx: number) => void
 }
@@ -71,6 +72,7 @@ export function Map({
   initialCenter,
   flyRequest,
   fitRequest,
+  hoverPoint,
   onMapClick,
   onSelectRoute,
 }: MapProps) {
@@ -182,6 +184,12 @@ export function Map({
         </Marker>
       )}
 
+      {hoverPoint && (
+        <Marker longitude={hoverPoint.lng} latitude={hoverPoint.lat} anchor="center">
+          <HoverDot />
+        </Marker>
+      )}
+
       {alternativesGeoJson.features.length > 0 && (
         <Source
           id="route-alternatives"
@@ -272,5 +280,14 @@ function Pin({ color, label }: { color: string; label: string }) {
     >
       {label}
     </div>
+  )
+}
+
+function HoverDot() {
+  return (
+    <div
+      className="h-3 w-3 rounded-full border-2 border-white shadow"
+      style={{ backgroundColor: '#0f172a' }}
+    />
   )
 }

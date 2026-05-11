@@ -3,6 +3,7 @@ import type {
   BreakdownEntry,
   Segment,
 } from './lib/segments'
+import type { ElevationPoint } from './lib/elevation'
 
 export type LngLat = {
   lng: number
@@ -24,6 +25,7 @@ export type RouteResult = {
   segmentsGeoJson: FeatureCollection
   segments: Segment[]
   breakdown: BreakdownEntry[]
+  elevationProfile: ElevationPoint[]
   stats: RouteStats
   rawGpxUrl: string
 }

@@ -11,6 +11,7 @@ import {
   type Segment,
 } from '../lib/segments'
 import { AddressSearch } from './AddressSearch'
+import { ElevationChart } from './ElevationChart'
 
 type SidebarProps = {
   start: LngLat | null
@@ -23,8 +24,12 @@ type SidebarProps = {
   isFetching: boolean
   error: Error | null
   highlightedSegmentIdx: number | null
+  hoveredDistanceM: number | null
   sheetOpen: boolean
   onToggleSheet: () => void
+  onProfileHover: (
+    state: { distanceM: number; point: LngLat } | null,
+  ) => void
   onProfileChange: (profile: RoutingProfile) => void
   onSelectRoute: (idx: number) => void
   onHighlightSegment: (idx: number | null) => void
@@ -48,8 +53,10 @@ export function Sidebar({
   isFetching,
   error,
   highlightedSegmentIdx,
+  hoveredDistanceM,
   sheetOpen,
   onToggleSheet,
+  onProfileHover,
   onProfileChange,
   onSelectRoute,
   onHighlightSegment,
@@ -144,6 +151,13 @@ export function Sidebar({
         {selectedRoute && (
           <>
             <Stats route={selectedRoute} />
+            {selectedRoute.elevationProfile.length > 1 && (
+              <ElevationChart
+                profile={selectedRoute.elevationProfile}
+                hoveredDistanceM={hoveredDistanceM}
+                onHover={onProfileHover}
+              />
+            )}
             {selectedRoute.breakdown.length > 0 && (
               <Composition breakdown={selectedRoute.breakdown} />
             )}

@@ -37,6 +37,10 @@ export default function App() {
     point: LngLat
     nonce: number
   } | null>(null)
+  const [profileHover, setProfileHover] = useState<{
+    distanceM: number
+    point: LngLat
+  } | null>(null)
   const [fitRequest] = useState<{
     bounds: [LngLat, LngLat]
     nonce: number
@@ -167,6 +171,7 @@ export default function App() {
           initialCenter={initialCenter}
           flyRequest={flyRequest}
           fitRequest={fitRequest}
+          hoverPoint={profileHover?.point ?? null}
           onMapClick={handleMapClick}
           onSelectRoute={setSelectedRouteIdx}
         />
@@ -182,8 +187,10 @@ export default function App() {
         isFetching={routes.isFetching}
         error={routes.error as Error | null}
         highlightedSegmentIdx={highlightedSegmentIdx}
+        hoveredDistanceM={profileHover?.distanceM ?? null}
         sheetOpen={sheetOpen}
         onToggleSheet={() => setSheetOpen((o) => !o)}
+        onProfileHover={setProfileHover}
         onProfileChange={setProfile}
         onSelectRoute={setSelectedRouteIdx}
         onHighlightSegment={setHighlightedSegmentIdx}
