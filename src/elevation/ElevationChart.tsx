@@ -40,26 +40,29 @@ export function ElevationChart({ profile }: { profile: ElevationPoint[] }) {
   })()
 
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3">
+    <div className="paper-card rounded-xl p-4">
       <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">
-          Profil altimétrique
-        </h2>
         {hoveredPoint ? (
-          <span className="text-xs tabular-nums text-slate-600">
-            {formatDistance(hoveredPoint.distanceM / 1000)} ·{' '}
+          <span className="numeral text-[0.78rem] text-ink">
+            {formatDistance(hoveredPoint.distanceM / 1000)}
+            <span className="mx-1.5 text-sepia-soft">·</span>
             {formatElevation(hoveredPoint.elevationM)}
           </span>
         ) : (
-          <span className="text-xs text-slate-500">
-            {formatElevation(yRange.lo)} – {formatElevation(yRange.hi)}
+          <span className="numeral text-[0.78rem] text-sepia">
+            <span className="text-ink">{formatElevation(yRange.lo)}</span>
+            <span className="mx-1.5">→</span>
+            <span className="text-ink">{formatElevation(yRange.hi)}</span>
           </span>
         )}
+        <span className="eyebrow-tight text-sepia-soft">Altitude</span>
       </div>
       <AreaChart
         points={xyPoints}
         hoveredX={hoveredX}
         onHoverX={handleHoverX}
+        lineColor="#b8501a"
+        areaColor="#b8501a"
         xAxisLabel={(distanceM) => formatDistance(distanceM / 1000)}
       />
     </div>

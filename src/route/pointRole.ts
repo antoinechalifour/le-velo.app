@@ -7,9 +7,9 @@ export function pointRole(idx: number, total: number): PointRole {
 }
 
 export const ROLE_META: Record<PointRole, { label: string; color: string }> = {
-  start: { label: 'Départ', color: '#16a34a' },
-  waypoint: { label: 'Étape', color: '#2563eb' },
-  end: { label: 'Arrivée', color: '#dc2626' },
+  start: { label: 'Départ', color: '#1f4d2e' },
+  waypoint: { label: 'Étape', color: '#3d6b8e' },
+  end: { label: 'Arrivée', color: '#7c2229' },
 }
 
 export function roleLetter(role: PointRole, idx: number): string {

@@ -31,8 +31,8 @@ export function AreaChart({
   points,
   hoveredX,
   onHoverX,
-  lineColor = '#2563eb',
-  areaColor = '#bfdbfe',
+  lineColor = '#1f4d2e',
+  areaColor = '#1f4d2e',
   className = 'block h-36 w-full',
   xAxisLabel,
   yAxisLabel = (y) => String(Math.round(y)),
@@ -81,11 +81,11 @@ export function AreaChart({
           x2={hx}
           y1={viewport.padTop}
           y2={viewport.padTop + plotH}
-          stroke="#0f172a"
+          stroke="#1c1917"
           strokeWidth={1}
           strokeDasharray="2 2"
         />
-        <circle cx={hx} cy={hy} r={4} fill="#0f172a" />
+        <circle cx={hx} cy={hy} r={4} fill="#1c1917" />
       </g>
     )
   }
@@ -104,7 +104,7 @@ export function AreaChart({
         y1={viewport.padTop}
         x2={viewport.padLeft}
         y2={viewport.padTop + plotH}
-        stroke="#cbd5e1"
+        stroke="rgba(28, 25, 23, 0.18)"
         strokeWidth={1}
       />
       <line
@@ -112,17 +112,17 @@ export function AreaChart({
         y1={viewport.padTop + plotH}
         x2={viewport.width - viewport.padRight}
         y2={viewport.padTop + plotH}
-        stroke="#cbd5e1"
+        stroke="rgba(28, 25, 23, 0.18)"
         strokeWidth={1}
       />
-      <path d={paths.areaPath} fill={areaColor} opacity={0.55} />
-      <path d={paths.linePath} fill="none" stroke={lineColor} strokeWidth={1.5} />
+      <path d={paths.areaPath} fill={areaColor} opacity={0.18} />
+      <path d={paths.linePath} fill="none" stroke={lineColor} strokeWidth={1.8} />
       {hoverElement}
       <text
         x={viewport.padLeft - 4}
         y={viewport.padTop + 8}
         textAnchor="end"
-        className="fill-slate-500"
+        className="fill-[var(--color-sepia)] font-[var(--font-jersey)] uppercase tracking-widest"
         fontSize="9"
       >
         {yAxisLabel(scales.yMax)}
@@ -131,7 +131,7 @@ export function AreaChart({
         x={viewport.padLeft - 4}
         y={viewport.padTop + plotH}
         textAnchor="end"
-        className="fill-slate-500"
+        className="fill-[var(--color-sepia)] font-[var(--font-jersey)] uppercase tracking-widest"
         fontSize="9"
       >
         {yAxisLabel(scales.yMin)}
@@ -142,7 +142,7 @@ export function AreaChart({
             x={viewport.padLeft}
             y={viewport.height - 6}
             textAnchor="start"
-            className="fill-slate-500"
+            className="fill-[var(--color-sepia)] font-[var(--font-jersey)] uppercase tracking-widest"
             fontSize="9"
           >
             {xAxisLabel(scales.xMin)}
@@ -151,7 +151,7 @@ export function AreaChart({
             x={viewport.width - viewport.padRight}
             y={viewport.height - 6}
             textAnchor="end"
-            className="fill-slate-500"
+            className="fill-[var(--color-sepia)] font-[var(--font-jersey)] uppercase tracking-widest"
             fontSize="9"
           >
             {xAxisLabel(scales.xMax)}

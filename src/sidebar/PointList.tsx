@@ -1,7 +1,9 @@
+import { useQuery } from '@tanstack/react-query'
 import { useSetAtom } from 'jotai'
 import { GripVertical, X } from 'lucide-react'
 import { AddressSearch } from '../addressSearch/AddressSearch'
 import type { LngLat } from '../geo/lngLat'
+import { nominatimReverseQueryOptions } from '../nominatim/query'
 import { pointRole, ROLE_META, roleLetter } from '../route/pointRole'
 import type { RoutePoint } from '../route/point'
 import { pushCameraCommandAtom } from '../state/camera'
@@ -10,6 +12,11 @@ import { useDragReorder } from './useDragReorder'
 
 function formatPoint(p: LngLat): string {
   return `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`
+}
+
+function usePointDisplay(p: RoutePoint): string {
+  const { data } = useQuery(nominatimReverseQueryOptions(p.label ? null : p.point))
+  return p.label ?? data?.shortLabel ?? formatPoint(p.point)
 }
 
 function addLabel(count: number): string {
@@ -50,7 +57,7 @@ export function PointList() {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {points.map((p, idx) => {
         const role = pointRole(idx, points.length)
         const meta = ROLE_META[role]
@@ -62,7 +69,6 @@ export function PointList() {
             roleLabel={meta.label}
             roleColor={meta.color}
             letter={roleLetter(role, idx)}
-            display={p.label ?? formatPoint(p.point)}
             highlighted={drag.isOverTarget(idx)}
             dragging={drag.isDragging(idx)}
             dragHandlers={drag.handlers(idx)}
@@ -71,16 +77,17 @@ export function PointList() {
         )
       })}
 
-      <div className="rounded-md border border-dashed border-slate-300 bg-slate-50/50 p-3">
-        <div className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+      <div className="rounded-xl border-2 border-dashed border-ink/20 bg-paper-soft/40 p-3.5">
+        <div className="eyebrow-tight mb-2 flex items-center gap-2 text-sepia">
+          <span aria-hidden className="text-rust">＋</span>
           {addLabel(points.length)}
         </div>
         <AddressSearch
           placeholder={addPlaceholder(points.length)}
           onSelect={handleAdd}
         />
-        <p className="mt-1 text-[11px] text-slate-500">
-          ou cliquez sur la carte
+        <p className="mt-2 text-[0.72rem] italic text-sepia-soft">
+          …ou pointez directement sur la carte.
         </p>
       </div>
     </div>
@@ -93,7 +100,6 @@ type PointRowProps = {
   roleLabel: string
   roleColor: string
   letter: string
-  display: string
   highlighted: boolean
   dragging: boolean
   dragHandlers: ReturnType<ReturnType<typeof useDragReorder>['handlers']>
@@ -101,43 +107,46 @@ type PointRowProps = {
 }
 
 function PointRow({
+  point,
   roleLabel,
   roleColor,
   letter,
-  display,
   highlighted,
   dragging,
   dragHandlers,
   onRemove,
 }: PointRowProps) {
+  const display = usePointDisplay(point)
   return (
     <div
       {...dragHandlers}
-      className={`flex items-center gap-3 rounded-md border bg-white p-3 transition ${
-        highlighted ? 'border-blue-400 ring-2 ring-blue-200' : 'border-slate-200'
+      className={`paper-card flex items-center gap-3 rounded-xl p-3 transition ${
+        highlighted ? '!border-rust ring-2 ring-rust/30' : ''
       } ${dragging ? 'opacity-50' : ''}`}
     >
       <span
-        className="flex h-6 w-6 shrink-0 cursor-grab items-center justify-center rounded-full text-xs font-bold text-white"
+        className="display-serif flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-full text-base font-semibold text-paper-soft shadow-[0_2px_0_rgba(28,25,23,0.18)]"
         style={{ backgroundColor: roleColor }}
         title="Glisser pour réordonner"
       >
         {letter}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-          <GripVertical size={12} className="text-slate-300" />
+        <div className="eyebrow-tight flex items-center gap-1 text-sepia">
+          <GripVertical size={12} className="text-sepia-soft" />
           {roleLabel}
         </div>
-        <div className="mt-0.5 truncate text-sm text-slate-900">{display}</div>
+        <div className="mt-0.5 truncate text-[0.92rem] font-medium text-ink">
+          {display}
+        </div>
       </div>
       <button
         type="button"
         onClick={onRemove}
         aria-label="Retirer ce point"
-        className="text-slate-400 hover:text-red-600"
+        className="focus-ring grid h-8 w-8 place-items-center rounded-full text-sepia-soft transition hover:bg-burgundy/10 hover:text-burgundy"
       >
-        <X size={18} />
+        <X size={16} />
       </button>
     </div>
   )

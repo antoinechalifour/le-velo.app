@@ -72,15 +72,17 @@ export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
         autoComplete="off"
-        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-300"
+        className="focus-ring w-full rounded-lg border border-ink/20 bg-paper-soft px-3.5 py-2.5 text-sm font-medium text-ink placeholder:font-normal placeholder:italic placeholder:text-sepia-soft focus:border-rust focus:outline-none"
       />
       {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+        <div className="paper-card scroll-soft absolute left-0 right-0 top-full z-20 mt-1.5 max-h-72 overflow-y-auto rounded-lg shadow-xl">
           {isFetching && results.length === 0 && (
-            <div className="px-3 py-2 text-xs text-slate-500">Recherche…</div>
+            <div className="eyebrow-tight px-3.5 py-2.5 text-sepia">
+              Recherche…
+            </div>
           )}
           {!isFetching && results.length === 0 && (
-            <div className="px-3 py-2 text-xs text-slate-500">
+            <div className="px-3.5 py-2.5 text-xs italic text-sepia">
               Aucun résultat
             </div>
           )}
@@ -95,14 +97,16 @@ export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
                   e.preventDefault()
                   pick(r)
                 }}
-                className={`block w-full px-3 py-2 text-left text-xs ${
-                  active ? 'bg-blue-50' : 'hover:bg-slate-50'
+                className={`block w-full border-b border-ink/8 px-3.5 py-2.5 text-left text-xs last:border-b-0 ${
+                  active ? 'bg-rust/8' : 'hover:bg-paper-deep/40'
                 }`}
               >
-                <div className="truncate font-medium text-slate-900">
+                <div className="truncate text-[0.85rem] font-medium text-ink">
                   {r.shortLabel}
                 </div>
-                <div className="truncate text-slate-500">{r.label}</div>
+                <div className="truncate text-[0.72rem] text-sepia">
+                  {r.label}
+                </div>
               </button>
             )
           })}

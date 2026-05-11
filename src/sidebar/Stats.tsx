@@ -9,46 +9,108 @@ import type { RouteResult } from '../route/route'
 export function Stats({ route }: { route: RouteResult }) {
   const avgSpeed = formatSpeed(route.stats.distanceKm, route.stats.durationMin)
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3">
-      <h2 className="mb-3 text-sm font-semibold text-slate-900">Itinéraire</h2>
-      <dl className="grid grid-cols-2 gap-3 text-sm">
-        <Stat label="Distance" value={formatDistance(route.stats.distanceKm)} />
-        <Stat
+    <div className="paper-card overflow-hidden rounded-xl">
+      <div className="grid grid-cols-2 divide-x divide-ink/10 border-b border-ink/10">
+        <BigStat
+          label="Distance"
+          value={formatDistance(route.stats.distanceKm)}
+          accent="forest"
+        />
+        <BigStat
           label="Durée estimée"
           value={formatDuration(route.stats.durationMin)}
+          accent="ink"
         />
-        <Stat label="D+ (montée)" value={formatElevation(route.stats.ascentM)} />
-        <Stat
-          label="D− (descente)"
+      </div>
+      <div className="grid grid-cols-2 divide-x divide-ink/10">
+        <BigStat
+          label="D+ Montée"
+          value={formatElevation(route.stats.ascentM)}
+          accent="rust"
+          icon="↗"
+        />
+        <BigStat
+          label="D− Descente"
           value={formatElevation(route.stats.descentM)}
+          accent="sky"
+          icon="↘"
         />
-      </dl>
+      </div>
+
       {avgSpeed && (
-        <p className="mt-3 text-xs text-slate-500">
-          Vitesse moyenne estimée :{' '}
-          <span className="font-medium text-slate-700">{avgSpeed}</span>. Le
-          moteur BRouter pondère cette vitesse selon le type de voie, la pente
-          et le profil sélectionné — c'est une estimation, pas une cible.
-        </p>
+        <div className="border-t border-ink/10 bg-paper-deep/40 px-4 py-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="eyebrow-tight text-sepia">Allure moyenne</span>
+            <span className="numeral text-base font-semibold text-ink">
+              {avgSpeed}
+            </span>
+          </div>
+          <p className="mt-1 text-[0.72rem] leading-relaxed text-sepia">
+            Estimation BRouter pondérée par type de voie et pente — boussole,
+            pas chronomètre.
+          </p>
+        </div>
       )}
+
       <a
         href={route.rawGpxUrl}
         download="itineraire.gpx"
-        className="mt-4 block w-full rounded-md bg-slate-900 px-3 py-2 text-center text-sm font-medium text-white hover:bg-slate-800"
+        className="focus-ring group flex items-center justify-between gap-2 border-t-2 border-dashed border-ink/25 bg-ink px-5 py-3.5 text-paper-soft transition hover:bg-forest-deep"
       >
-        Télécharger GPX
+        <span className="flex items-center gap-3">
+          <span
+            aria-hidden
+            className="numeral inline-flex h-7 w-7 items-center justify-center rounded-full border border-paper-soft/40 text-xs"
+          >
+            ↓
+          </span>
+          <span className="eyebrow-tight text-paper-soft">
+            Télécharger le GPX
+          </span>
+        </span>
+        <span className="numeral text-[0.7rem] tracking-widest text-mustard">
+          .GPX
+        </span>
       </a>
     </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+const ACCENT: Record<string, string> = {
+  forest: 'text-forest',
+  ink: 'text-ink',
+  rust: 'text-rust',
+  sky: 'text-sky-vtg',
+}
+
+function BigStat({
+  label,
+  value,
+  accent,
+  icon,
+}: {
+  label: string
+  value: string
+  accent: keyof typeof ACCENT | string
+  icon?: string
+}) {
   return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-slate-500">
-        {label}
-      </dt>
-      <dd className="mt-0.5 font-semibold text-slate-900">{value}</dd>
+    <div className="px-4 py-3.5">
+      <div className="eyebrow-tight text-sepia">{label}</div>
+      <div className="mt-1 flex items-baseline gap-1.5">
+        {icon && (
+          <span className={`text-sm ${ACCENT[accent] ?? 'text-ink'}`}>
+            {icon}
+          </span>
+        )}
+        <span
+          className={`numeral text-[1.7rem] font-semibold leading-none ${
+            ACCENT[accent] ?? 'text-ink'
+          }`}
+        >
+          {value}
+        </span>
+      </div>
     </div>
   )
 }

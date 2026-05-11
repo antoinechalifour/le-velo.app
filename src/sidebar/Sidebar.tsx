@@ -50,80 +50,149 @@ export function Sidebar() {
   return (
     <aside
       className={`
-        fixed bottom-0 left-0 right-0 z-10 flex h-[85dvh] max-h-[85dvh] flex-col
-        overflow-hidden rounded-t-2xl bg-white shadow-2xl
+        paper-grain fixed bottom-0 left-0 right-0 z-10 flex h-[85dvh] max-h-[85dvh] flex-col
+        overflow-hidden rounded-t-[1.25rem] shadow-2xl
         transition-transform duration-300 ease-out
         ${sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-5.5rem)]'}
-        md:static md:h-full md:max-h-none md:w-96 md:translate-y-0 md:rounded-none
-        md:border-r md:border-slate-200 md:shadow-none md:transition-none
+        md:static md:h-full md:max-h-none md:w-1/3 md:min-w-[26rem] md:max-w-[48rem] md:translate-y-0 md:rounded-none
+        md:border-r md:border-ink/12 md:shadow-[6px_0_24px_-12px_rgba(28,25,23,0.18)] md:transition-none
       `}
     >
       <PeekBar status={peekStatus} />
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5 pt-2 md:pt-5">
-        <header className="hidden md:block">
-          <div className="flex items-center gap-2.5">
-            <Logo className="h-7 w-7" />
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-              Le Vélo
-            </h1>
-          </div>
-          <p className="mt-2 text-sm text-slate-500">
-            Itinéraires vélo qui suivent les voies cyclables référencées — OSM
-            + BRouter.
-          </p>
+      <div className="scroll-soft flex flex-1 flex-col overflow-y-auto">
+        <header className="hidden px-7 pt-7 md:block">
+          <BrandHeader />
         </header>
 
-        <ProfilePicker />
+        <div className="flex flex-col gap-5 px-5 pt-2 pb-6 md:px-7 md:pt-6">
+          <Section eyebrow="Nº 01 · Profil">
+            <ProfilePicker />
+          </Section>
 
-        <PointList />
+          <Section eyebrow="Nº 02 · Étapes du parcours">
+            <PointList />
+          </Section>
 
-        {isFetching && (
-          <p className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">
-            Calcul des itinéraires…
-          </p>
-        )}
+          {isFetching && (
+            <div className="paper-card flex items-center gap-3 rounded-lg px-4 py-3 text-sm">
+              <Logo spinning className="h-5 w-5 text-forest" />
+              <span className="font-medium text-ink-soft">
+                Tracé de l’itinéraire en cours…
+              </span>
+            </div>
+          )}
 
-        {error && (
-          <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
-            {(error as Error).message}
-          </p>
-        )}
+          {error && (
+            <div className="rounded-lg border-2 border-burgundy/30 bg-burgundy/8 px-4 py-3 text-sm text-burgundy">
+              <div className="eyebrow-tight text-burgundy">Avarie</div>
+              <p className="mt-1">{(error as Error).message}</p>
+            </div>
+          )}
 
-        {routes.length > 1 && <Alternatives routes={routes} />}
+          {routes.length > 1 && (
+            <Section eyebrow="Nº 03 · Variantes">
+              <Alternatives routes={routes} />
+            </Section>
+          )}
 
-        {selectedRoute && (
-          <>
-            <Stats route={selectedRoute} />
-            {selectedRoute.elevationProfile.length > 1 && (
-              <ElevationChart profile={selectedRoute.elevationProfile} />
-            )}
-            {selectedRoute.breakdown.length > 0 && (
-              <Composition breakdown={selectedRoute.breakdown} />
-            )}
-            {selectedRoute.surfaceBands.length > 0 && (
-              <SurfaceBands bands={selectedRoute.surfaceBands} />
-            )}
-            {selectedRoute.segments.length > 0 && (
-              <SegmentList segments={selectedRoute.segments} />
-            )}
-          </>
-        )}
+          {selectedRoute && (
+            <>
+              <Section eyebrow="Carnet de route">
+                <Stats route={selectedRoute} />
+              </Section>
+              {selectedRoute.elevationProfile.length > 1 && (
+                <Section eyebrow="Profil altimétrique">
+                  <ElevationChart profile={selectedRoute.elevationProfile} />
+                </Section>
+              )}
+              {selectedRoute.breakdown.length > 0 && (
+                <Section eyebrow="Composition des voies">
+                  <Composition breakdown={selectedRoute.breakdown} />
+                </Section>
+              )}
+              {selectedRoute.surfaceBands.length > 0 && (
+                <Section eyebrow="Revêtement">
+                  <SurfaceBands bands={selectedRoute.surfaceBands} />
+                </Section>
+              )}
+              {selectedRoute.segments.length > 0 && (
+                <Section eyebrow="Détail des segments">
+                  <SegmentList segments={selectedRoute.segments} />
+                </Section>
+              )}
+            </>
+          )}
 
-        {points.length > 0 && (
-          <button
-            type="button"
-            onClick={handleReset}
-            className="mt-auto rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Réinitialiser
-          </button>
-        )}
+          {points.length > 0 && (
+            <button
+              type="button"
+              onClick={handleReset}
+              className="focus-ring eyebrow-tight mt-1 inline-flex items-center justify-center gap-2 self-start rounded-full border border-ink/25 bg-paper-soft px-4 py-2 text-ink-soft transition hover:border-rust hover:bg-rust/8 hover:text-rust"
+            >
+              <span aria-hidden>↺</span> Recommencer
+            </button>
+          )}
 
-        <footer className="text-xs text-slate-400">
-          Données &copy; OpenStreetMap. Routage : brouter.de.
-        </footer>
+          <footer className="mt-2 border-t border-ink/15 pt-4 text-[11px] leading-relaxed text-sepia-soft">
+            <div className="eyebrow-tight mb-1 text-sepia">Colophon</div>
+            Données cartographiques © OpenStreetMap, contributeurs bénévoles.
+            Calcul d’itinéraire confié à BRouter. Sans compte, sans publicité.
+          </footer>
+        </div>
       </div>
     </aside>
+  )
+}
+
+function BrandHeader() {
+  return (
+    <div>
+      <div className="rule-double mb-4" />
+      <div className="flex items-end gap-3">
+        <Logo className="h-14 w-14 text-ink" />
+        <div className="min-w-0 flex-1 pb-1">
+          <div className="eyebrow-tight text-rust">Cyclisme · Itinéraires</div>
+          <h1 className="display-serif -mt-0.5 text-[2.4rem] font-medium leading-[0.95] tracking-tight text-ink">
+            Le{' '}
+            <span
+              className="italic"
+              style={{ fontVariationSettings: '"SOFT" 80, "opsz" 96' }}
+            >
+              Vélo
+            </span>
+          </h1>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <span className="h-px flex-1 bg-ink/25" />
+        <span className="eyebrow text-sepia">Édition Française</span>
+        <span className="h-px flex-1 bg-ink/25" />
+      </div>
+      <p className="mt-3 max-w-[36ch] text-[0.82rem] leading-relaxed text-sepia">
+        Tracés qui suivent les voies cyclables référencées par
+        OpenStreetMap — moteur{' '}
+        <span className="italic text-ink-soft">BRouter</span>, export GPX,
+        aucune fioriture.
+      </p>
+    </div>
+  )
+}
+
+function Section({
+  eyebrow,
+  children,
+}: {
+  eyebrow: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <span className="eyebrow text-sepia">{eyebrow}</span>
+        <span className="h-px flex-1 bg-ink/15" />
+      </div>
+      {children}
+    </section>
   )
 }

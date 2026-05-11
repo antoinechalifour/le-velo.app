@@ -4,12 +4,13 @@ import { CATEGORY_META } from '../route/segmentCategory'
 
 export function Composition({ breakdown }: { breakdown: BreakdownEntry[] }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3">
-      <div className="mb-2 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">Type de voies</h2>
-        <span className="text-[11px] text-slate-500">d'après tags OSM</span>
+    <div className="paper-card rounded-xl p-4">
+      <div className="mb-3 flex items-baseline justify-between">
+        <span className="text-[0.7rem] italic text-sepia-soft">
+          d’après tags OSM
+        </span>
       </div>
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className="flex h-4 w-full overflow-hidden rounded-full border border-ink/15 bg-paper-deep">
         {breakdown.map((b) => (
           <div
             key={b.category}
@@ -21,30 +22,31 @@ export function Composition({ breakdown }: { breakdown: BreakdownEntry[] }) {
           />
         ))}
       </div>
-      <ul className="mt-3 space-y-2 text-xs">
+      <ul className="mt-4 space-y-2.5">
         {breakdown.map((b) => {
           const meta = CATEGORY_META[b.category]
           return (
-            <li key={b.category} className="flex items-start gap-2">
+            <li key={b.category} className="flex items-start gap-2.5">
               <span
-                className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                className="mt-1 h-3 w-3 shrink-0 rounded-sm ring-1 ring-ink/20"
                 style={{ backgroundColor: meta.color }}
               />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-slate-800">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-[0.86rem] font-medium text-ink">
                     {meta.label}
                   </span>
-                  <span className="flex items-center gap-2 tabular-nums">
-                    <span className="font-medium text-slate-900">
-                      {(b.share * 100).toFixed(0)}%
+                  <span className="flex items-baseline gap-2.5">
+                    <span className="numeral text-[0.95rem] font-semibold text-ink">
+                      {(b.share * 100).toFixed(0)}
+                      <span className="text-[0.7rem] text-sepia">%</span>
                     </span>
-                    <span className="w-16 text-right text-slate-500">
+                    <span className="numeral w-16 text-right text-[0.72rem] text-sepia">
                       {formatDistance(b.distanceM / 1000)}
                     </span>
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-500">
+                <div className="text-[0.72rem] leading-snug text-sepia-soft">
                   {meta.description}
                 </div>
               </div>

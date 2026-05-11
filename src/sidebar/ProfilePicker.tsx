@@ -6,30 +6,41 @@ export function ProfilePicker() {
   const active = PROFILES.find((p) => p.id === value)
 
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-3">
-      <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-        Type de trajet
-      </h2>
-      <div className="grid grid-cols-4 gap-1 rounded-md bg-slate-100 p-1">
-        {PROFILES.map((p) => {
+    <div className="paper-card rounded-xl p-4">
+      <div className="grid grid-cols-4 gap-1.5">
+        {PROFILES.map((p, idx) => {
           const selected = p.id === value
           return (
             <button
               key={p.id}
               type="button"
               onClick={() => setValue(p.id)}
-              className={`rounded px-2 py-1.5 text-xs font-medium transition ${
+              className={`focus-ring relative flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 transition ${
                 selected
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'border-forest bg-forest text-paper-soft shadow-[0_2px_0_var(--color-forest-deep)]'
+                  : 'border-ink/15 bg-paper-soft/50 text-ink-soft hover:border-ink/30 hover:bg-paper-soft'
               }`}
             >
-              {p.label}
+              <span
+                className={`numeral text-[0.65rem] leading-none ${
+                  selected ? 'text-mustard' : 'text-sepia-soft'
+                }`}
+              >
+                Nº 0{idx + 1}
+              </span>
+              <span className="display-serif text-[0.95rem] font-medium leading-none tracking-tight">
+                {p.label}
+              </span>
             </button>
           )
         })}
       </div>
-      {active && <p className="mt-2 text-xs text-slate-500">{active.hint}</p>}
+      {active && (
+        <p className="mt-3 border-t border-ink/10 pt-3 text-[0.78rem] leading-relaxed text-sepia">
+          <span className="eyebrow-tight mr-1.5 text-rust">Note</span>
+          {active.hint}
+        </p>
+      )}
     </div>
   )
 }

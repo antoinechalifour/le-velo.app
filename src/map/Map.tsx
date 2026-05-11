@@ -38,9 +38,24 @@ const OSM_STYLE = {
   },
   layers: [
     {
+      id: 'paper',
+      type: 'background' as const,
+      paint: {
+        'background-color': '#efe6d2',
+      },
+    },
+    {
       id: 'osm',
       type: 'raster' as const,
       source: 'osm',
+      paint: {
+        'raster-saturation': -0.6,
+        'raster-contrast': -0.1,
+        'raster-brightness-min': 0.18,
+        'raster-brightness-max': 0.95,
+        'raster-hue-rotate': 18,
+        'raster-opacity': 0.78,
+      },
     },
   ],
 }
@@ -151,7 +166,7 @@ export function Map() {
       mapStyle={OSM_STYLE}
       onClick={handleClick}
       interactiveLayerIds={[ALT_LAYER_ID]}
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: '100%', height: '100%', backgroundColor: '#efe6d2' }}
     >
       {points.map((p, idx) => {
         const role = pointRole(idx, points.length)
@@ -187,9 +202,9 @@ export function Map() {
             id="route-alternatives-casing"
             type="line"
             paint={{
-              'line-color': '#fff',
-              'line-width': 7,
-              'line-opacity': 0.7,
+              'line-color': '#fbf6e9',
+              'line-width': 8,
+              'line-opacity': 0.85,
             }}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
           />
@@ -197,9 +212,9 @@ export function Map() {
             id={ALT_LAYER_ID}
             type="line"
             paint={{
-              'line-color': '#64748b',
+              'line-color': '#6b5d4f',
               'line-width': 4,
-              'line-opacity': 0.7,
+              'line-opacity': 0.75,
               'line-dasharray': [2, 1.5],
             }}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
@@ -213,9 +228,19 @@ export function Map() {
             id="route-casing"
             type="line"
             paint={{
-              'line-color': '#0f172a',
-              'line-width': 8,
-              'line-opacity': 0.55,
+              'line-color': '#1c1917',
+              'line-width': 9,
+              'line-opacity': 0.85,
+            }}
+            layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+          />
+          <Layer
+            id="route-paper"
+            type="line"
+            paint={{
+              'line-color': '#fbf6e9',
+              'line-width': 7,
+              'line-opacity': 1,
             }}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
           />
@@ -225,6 +250,7 @@ export function Map() {
             paint={{
               'line-color': colorExpression,
               'line-width': 5,
+              'line-opacity': 0.95,
             }}
             layout={{ 'line-cap': 'round', 'line-join': 'round' }}
           />
@@ -234,8 +260,8 @@ export function Map() {
               type="line"
               filter={['==', ['get', 'idx'], highlightedSegmentIdx]}
               paint={{
-                'line-color': '#fff',
-                'line-width': 9,
+                'line-color': '#fbf6e9',
+                'line-width': 11,
                 'line-opacity': 1,
               }}
               layout={{ 'line-cap': 'round', 'line-join': 'round' }}
@@ -248,7 +274,7 @@ export function Map() {
               filter={['==', ['get', 'idx'], highlightedSegmentIdx]}
               paint={{
                 'line-color': colorExpression,
-                'line-width': 5,
+                'line-width': 5.5,
               }}
               layout={{ 'line-cap': 'round', 'line-join': 'round' }}
             />
@@ -261,11 +287,17 @@ export function Map() {
 
 function Pin({ color, label }: { color: string; label: string }) {
   return (
-    <div
-      className="flex h-8 w-8 -translate-y-1 items-center justify-center rounded-full border-2 border-white text-sm font-bold text-white shadow-lg"
-      style={{ backgroundColor: color }}
-    >
-      {label}
+    <div className="relative -translate-y-1 flex flex-col items-center">
+      <div
+        className="display-serif flex h-9 w-9 items-center justify-center rounded-full text-[1rem] font-semibold text-paper-soft shadow-[0_3px_6px_-1px_rgba(28,25,23,0.45)] ring-[3px] ring-paper-soft"
+        style={{ backgroundColor: color }}
+      >
+        {label}
+      </div>
+      <div
+        className="-mt-1 h-2 w-2 rotate-45"
+        style={{ backgroundColor: color, boxShadow: '0 2px 3px -1px rgba(28,25,23,0.35)' }}
+      />
     </div>
   )
 }
@@ -273,8 +305,8 @@ function Pin({ color, label }: { color: string; label: string }) {
 function HoverDot() {
   return (
     <div
-      className="h-3 w-3 rounded-full border-2 border-white shadow"
-      style={{ backgroundColor: '#0f172a' }}
+      className="h-3.5 w-3.5 rounded-full border-2 border-paper-soft shadow-md"
+      style={{ backgroundColor: '#b8501a' }}
     />
   )
 }
