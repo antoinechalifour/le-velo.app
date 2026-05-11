@@ -12,8 +12,12 @@ export const ROLE_META: Record<PointRole, { label: string; color: string }> = {
   end: { label: 'Arrivée', color: '#7c2229' },
 }
 
-export function roleLetter(role: PointRole, idx: number): string {
-  if (role === 'start') return 'A'
-  if (role === 'end') return 'B'
+export function roleLetter(_role: PointRole, idx: number): string {
   return String(idx + 1)
+}
+
+export function roleTooltipLabel(role: PointRole, idx: number): string {
+  if (role === 'start') return 'Départ'
+  if (role === 'end') return 'Arrivée'
+  return `Étape ${idx}`
 }

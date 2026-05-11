@@ -12,7 +12,12 @@ import type { ExpressionSpecification } from 'maplibre-gl'
 import type { Feature, FeatureCollection, LineString } from 'geojson'
 import { useRoutesQuery } from '../brouter/query'
 import type { LngLat } from '../geo/lngLat'
-import { pointRole, ROLE_META, roleLetter } from '../route/pointRole'
+import {
+  pointRole,
+  ROLE_META,
+  roleLetter,
+  roleTooltipLabel,
+} from '../route/pointRole'
 import { CATEGORY_META, CATEGORY_ORDER } from '../route/segmentCategory'
 import { cameraCommandAtom } from '../state/camera'
 import { highlightedSegmentIdxAtom } from '../state/highlight'
@@ -177,7 +182,11 @@ export function Map() {
             latitude={p.point.lat}
             anchor="bottom"
           >
-            <Pin color={ROLE_META[role].color} label={roleLetter(role, idx)} />
+            <Pin
+              color={ROLE_META[role].color}
+              label={roleLetter(role, idx)}
+              tooltip={roleTooltipLabel(role, idx)}
+            />
           </Marker>
         )
       })}
@@ -285,9 +294,41 @@ export function Map() {
   )
 }
 
-function Pin({ color, label }: { color: string; label: string }) {
+function Pin({
+  color,
+  label,
+  tooltip,
+}: {
+  color: string
+  label: string
+  tooltip: string
+}) {
   return (
     <div className="relative -translate-y-1 flex flex-col items-center">
+      <div className="mb-1 flex flex-col items-center">
+        <div
+          className="eyebrow-tight whitespace-nowrap px-2 py-[3px]"
+          style={{
+            color: color,
+            backgroundColor: 'var(--color-paper-soft)',
+            border: `1px solid ${color}`,
+            boxShadow:
+              '0 2px 4px -1px rgba(28,25,23,0.30), inset 0 0 0 1px rgba(251,246,233,0.65)',
+            fontSize: '0.62rem',
+            letterSpacing: '0.16em',
+          }}
+        >
+          {tooltip}
+        </div>
+        <div
+          className="-mt-[4px] h-1.5 w-1.5 rotate-45"
+          style={{
+            backgroundColor: 'var(--color-paper-soft)',
+            borderRight: `1px solid ${color}`,
+            borderBottom: `1px solid ${color}`,
+          }}
+        />
+      </div>
       <div
         className="display-serif flex h-9 w-9 items-center justify-center rounded-full text-[1rem] font-semibold text-paper-soft shadow-[0_3px_6px_-1px_rgba(28,25,23,0.45)] ring-[3px] ring-paper-soft"
         style={{ backgroundColor: color }}
