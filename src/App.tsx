@@ -4,14 +4,30 @@ import { Map } from './components/Map'
 import { Sidebar } from './components/Sidebar'
 import { fetchRoutes } from './lib/brouter'
 import { useGeolocation } from './lib/geolocation'
+import { parseUrlState, serializeUrlState } from './lib/urlState'
 import type { LngLat, RoutingProfile } from './types'
 
+const INITIAL_URL_STATE =
+  typeof window !== 'undefined'
+    ? parseUrlState(window.location.hash)
+    : { start: null, end: null, profile: null }
+
 export default function App() {
-  const [start, setStart] = useState<LngLat | null>(null)
-  const [end, setEnd] = useState<LngLat | null>(null)
-  const [startLabel, setStartLabel] = useState<string | null>(null)
-  const [endLabel, setEndLabel] = useState<string | null>(null)
-  const [profile, setProfile] = useState<RoutingProfile>('trekking')
+  const [start, setStart] = useState<LngLat | null>(
+    () => INITIAL_URL_STATE.start?.point ?? null,
+  )
+  const [end, setEnd] = useState<LngLat | null>(
+    () => INITIAL_URL_STATE.end?.point ?? null,
+  )
+  const [startLabel, setStartLabel] = useState<string | null>(
+    () => INITIAL_URL_STATE.start?.label ?? null,
+  )
+  const [endLabel, setEndLabel] = useState<string | null>(
+    () => INITIAL_URL_STATE.end?.label ?? null,
+  )
+  const [profile, setProfile] = useState<RoutingProfile>(
+    () => INITIAL_URL_STATE.profile ?? 'trekking',
+  )
   const [selectedRouteIdx, setSelectedRouteIdx] = useState(0)
   const [highlightedSegmentIdx, setHighlightedSegmentIdx] = useState<
     number | null
@@ -21,10 +37,47 @@ export default function App() {
     point: LngLat
     nonce: number
   } | null>(null)
+  const [fitRequest] = useState<{
+    bounds: [LngLat, LngLat]
+    nonce: number
+  } | null>(() => {
+    const s = INITIAL_URL_STATE.start?.point
+    const e = INITIAL_URL_STATE.end?.point
+    if (s && e) return { bounds: [s, e], nonce: Date.now() }
+    return null
+  })
+  const initialFlyFromUrlRef = useRef<LngLat | null>(
+    INITIAL_URL_STATE.start && !INITIAL_URL_STATE.end
+      ? INITIAL_URL_STATE.start.point
+      : !INITIAL_URL_STATE.start && INITIAL_URL_STATE.end
+        ? INITIAL_URL_STATE.end.point
+        : null,
+  )
   const hadDataRef = useRef(false)
 
   const geo = useGeolocation()
-  const initialCenter = geo.status === 'ready' ? geo.position : null
+  const skipGeo = !!INITIAL_URL_STATE.start || !!INITIAL_URL_STATE.end
+  const initialCenter =
+    !skipGeo && geo.status === 'ready' ? geo.position : null
+
+  useEffect(() => {
+    const p = initialFlyFromUrlRef.current
+    if (!p) return
+    initialFlyFromUrlRef.current = null
+    setFlyRequest({ point: p, nonce: Date.now() })
+  }, [])
+
+  useEffect(() => {
+    const hash = serializeUrlState({
+      start: start ? { point: start, label: startLabel } : null,
+      end: end ? { point: end, label: endLabel } : null,
+      profile,
+    })
+    const target = hash || window.location.pathname + window.location.search
+    if (window.location.hash !== hash) {
+      window.history.replaceState(null, '', target)
+    }
+  }, [start, end, startLabel, endLabel, profile])
 
   const routes = useQuery({
     queryKey: ['routes', start?.lng, start?.lat, end?.lng, end?.lat, profile],
@@ -113,6 +166,7 @@ export default function App() {
           highlightedSegmentIdx={highlightedSegmentIdx}
           initialCenter={initialCenter}
           flyRequest={flyRequest}
+          fitRequest={fitRequest}
           onMapClick={handleMapClick}
           onSelectRoute={setSelectedRouteIdx}
         />

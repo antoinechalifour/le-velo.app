@@ -20,6 +20,7 @@ type MapProps = {
   highlightedSegmentIdx: number | null
   initialCenter: LngLat | null
   flyRequest: { point: LngLat; nonce: number } | null
+  fitRequest: { bounds: [LngLat, LngLat]; nonce: number } | null
   onMapClick: (lngLat: LngLat) => void
   onSelectRoute: (idx: number) => void
 }
@@ -69,6 +70,7 @@ export function Map({
   highlightedSegmentIdx,
   initialCenter,
   flyRequest,
+  fitRequest,
   onMapClick,
   onSelectRoute,
 }: MapProps) {
@@ -138,6 +140,27 @@ export function Map({
       essential: true,
     })
   }, [flyRequest])
+
+  useEffect(() => {
+    if (!fitRequest) return
+    const map = mapRef.current
+    if (!map) return
+    hasFlownToUserRef.current = true
+    const [a, b] = fitRequest.bounds
+    const sw: [number, number] = [
+      Math.min(a.lng, b.lng),
+      Math.min(a.lat, b.lat),
+    ]
+    const ne: [number, number] = [
+      Math.max(a.lng, b.lng),
+      Math.max(a.lat, b.lat),
+    ]
+    map.fitBounds([sw, ne], {
+      padding: 80,
+      duration: 1000,
+      maxZoom: 13,
+    })
+  }, [fitRequest])
 
   return (
     <MapLibre
