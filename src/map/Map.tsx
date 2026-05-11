@@ -270,7 +270,7 @@ export function Map() {
         <Marker
           longitude={userLocation.lng}
           latitude={userLocation.lat}
-          anchor="center"
+          anchor="bottom"
         >
           <UserLocationMarker />
         </Marker>
@@ -456,13 +456,22 @@ function HoverDot() {
 }
 
 function UserLocationMarker() {
+  const color = '#1d4ed8'
   return (
-    <div
-      className="flex h-9 w-9 items-center justify-center rounded-full text-paper-soft shadow-[0_3px_6px_-1px_rgba(28,25,23,0.45)] ring-[3px] ring-paper-soft"
-      style={{ backgroundColor: '#1d4ed8' }}
-      title="Votre position"
-    >
-      <Bike size={20} strokeWidth={2.25} />
+    <div className="flex flex-col items-center" title="Votre position">
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded-full text-paper-soft shadow-[0_3px_6px_-1px_rgba(28,25,23,0.45)] ring-[3px] ring-paper-soft"
+        style={{ backgroundColor: color }}
+      >
+        <Bike size={20} strokeWidth={2.25} />
+      </div>
+      <div
+        className="-mt-1 h-2 w-2 rotate-45"
+        style={{
+          backgroundColor: color,
+          boxShadow: '0 2px 3px -1px rgba(28,25,23,0.35)',
+        }}
+      />
     </div>
   )
 }
