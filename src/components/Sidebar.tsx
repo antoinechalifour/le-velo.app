@@ -6,7 +6,12 @@ import {
   type RouteResult,
   type RoutingProfile,
 } from '../types'
-import { formatDistance, formatDuration, formatElevation } from '../lib/format'
+import {
+  formatDistance,
+  formatDuration,
+  formatElevation,
+  formatSpeed,
+} from '../lib/format'
 import {
   CATEGORY_META,
   type BreakdownEntry,
@@ -536,18 +541,27 @@ function addPlaceholder(count: number): string {
 }
 
 function Stats({ route }: { route: RouteResult }) {
+  const avgSpeed = formatSpeed(route.stats.distanceKm, route.stats.durationMin)
   return (
     <div className="rounded-md border border-slate-200 bg-white p-3">
       <h2 className="mb-3 text-sm font-semibold text-slate-900">Itinéraire</h2>
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <Stat label="Distance" value={formatDistance(route.stats.distanceKm)} />
         <Stat
-          label="Durée est."
+          label="Durée estimée"
           value={formatDuration(route.stats.durationMin)}
         />
-        <Stat label="D+" value={formatElevation(route.stats.ascentM)} />
-        <Stat label="D−" value={formatElevation(route.stats.descentM)} />
+        <Stat label="D+ (montée)" value={formatElevation(route.stats.ascentM)} />
+        <Stat
+          label="D− (descente)"
+          value={formatElevation(route.stats.descentM)}
+        />
       </dl>
+      {avgSpeed && (
+        <p className="mt-3 text-xs text-slate-500">
+          Vitesse moyenne estimée : <span className="font-medium text-slate-700">{avgSpeed}</span>. Le moteur BRouter pondère cette vitesse selon le type de voie, la pente et le profil sélectionné — c'est une estimation, pas une cible.
+        </p>
+      )}
       <a
         href={route.rawGpxUrl}
         download="itineraire.gpx"
@@ -573,7 +587,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 function Composition({ breakdown }: { breakdown: BreakdownEntry[] }) {
   return (
     <div className="rounded-md border border-slate-200 bg-white p-3">
-      <h2 className="mb-3 text-sm font-semibold text-slate-900">Composition</h2>
+      <div className="mb-2 flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">
+          Type de voies
+        </h2>
+        <span className="text-[11px] text-slate-500">
+          d'après tags OSM
+        </span>
+      </div>
       <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
         {breakdown.map((b) => (
           <div
@@ -586,24 +607,36 @@ function Composition({ breakdown }: { breakdown: BreakdownEntry[] }) {
           />
         ))}
       </div>
-      <ul className="mt-3 space-y-1.5 text-xs">
-        {breakdown.map((b) => (
-          <li key={b.category} className="flex items-center gap-2">
-            <span
-              className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: CATEGORY_META[b.category].color }}
-            />
-            <span className="flex-1 text-slate-700">
-              {CATEGORY_META[b.category].label}
-            </span>
-            <span className="font-medium tabular-nums text-slate-900">
-              {(b.share * 100).toFixed(0)}%
-            </span>
-            <span className="w-16 text-right tabular-nums text-slate-500">
-              {formatDistance(b.distanceM / 1000)}
-            </span>
-          </li>
-        ))}
+      <ul className="mt-3 space-y-2 text-xs">
+        {breakdown.map((b) => {
+          const meta = CATEGORY_META[b.category]
+          return (
+            <li key={b.category} className="flex items-start gap-2">
+              <span
+                className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: meta.color }}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-slate-800">
+                    {meta.label}
+                  </span>
+                  <span className="flex items-center gap-2 tabular-nums">
+                    <span className="font-medium text-slate-900">
+                      {(b.share * 100).toFixed(0)}%
+                    </span>
+                    <span className="w-16 text-right text-slate-500">
+                      {formatDistance(b.distanceM / 1000)}
+                    </span>
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {meta.description}
+                </div>
+              </div>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )

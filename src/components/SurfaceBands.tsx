@@ -42,23 +42,32 @@ export function SurfaceBands({ bands }: SurfaceBandsProps) {
           )
         })}
       </div>
-      <ul className="mt-3 space-y-1.5 text-xs">
+      <ul className="mt-3 space-y-2 text-xs">
         {legend.map((cat) => {
           const meta = SURFACE_META[cat]
           const dist = totals[cat]!
           return (
-            <li key={cat} className="flex items-center gap-2">
+            <li key={cat} className="flex items-start gap-2">
               <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: meta.color }}
               />
-              <span className="flex-1 text-slate-700">{meta.label}</span>
-              <span className="font-medium tabular-nums text-slate-900">
-                {((dist / total) * 100).toFixed(0)}%
-              </span>
-              <span className="w-16 text-right tabular-nums text-slate-500">
-                {formatDistance(dist / 1000)}
-              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-slate-800">{meta.label}</span>
+                  <span className="flex items-center gap-2 tabular-nums">
+                    <span className="font-medium text-slate-900">
+                      {((dist / total) * 100).toFixed(0)}%
+                    </span>
+                    <span className="w-16 text-right text-slate-500">
+                      {formatDistance(dist / 1000)}
+                    </span>
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {meta.description}
+                </div>
+              </div>
             </li>
           )
         })}

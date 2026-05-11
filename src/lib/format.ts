@@ -13,3 +13,9 @@ export function formatDuration(min: number): string {
 export function formatElevation(m: number): string {
   return `${Math.round(m)} m`
 }
+
+export function formatSpeed(distanceKm: number, durationMin: number): string | null {
+  if (durationMin <= 0 || distanceKm <= 0) return null
+  const kmh = distanceKm / (durationMin / 60)
+  return `${kmh.toFixed(1)} km/h`
+}

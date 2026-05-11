@@ -49,21 +49,21 @@ export const PROFILES: ProfileMeta[] = [
   {
     id: 'fastbike',
     label: 'Route',
-    hint: 'Vélo route — privilégie le bitume',
+    hint: 'Vélo route — privilégie le bitume, allure rapide.',
   },
   {
     id: 'trekking',
     label: 'Mixte',
-    hint: 'Trekking — bitume + chemins, défaut polyvalent',
+    hint: 'Polyvalent — alterne bitume et chemins stabilisés. Par défaut.',
   },
   {
     id: 'safety',
     label: 'Tranquille',
-    hint: 'Minimise le trafic motorisé',
+    hint: 'Minimise le trafic motorisé. Préfère pistes cyclables et routes calmes, quitte à rallonger.',
   },
   {
     id: 'shortest',
     label: 'Court',
-    hint: 'Le plus direct, ignore le confort',
+    hint: 'Le plus direct kilométriquement. Ignore confort et sécurité.',
   },
 ]
