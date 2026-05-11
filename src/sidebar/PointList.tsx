@@ -120,7 +120,7 @@ function PointRow({
   return (
     <div
       {...dragHandlers}
-      className={`paper-card flex items-center gap-3 rounded-xl p-3 transition ${
+      className={`paper-card ink-wash flex items-center gap-3 overflow-hidden rounded-xl p-3 transition ${
         highlighted ? '!border-rust ring-2 ring-rust/30' : ''
       } ${dragging ? 'opacity-50' : ''}`}
     >

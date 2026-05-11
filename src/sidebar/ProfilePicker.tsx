@@ -15,10 +15,10 @@ export function ProfilePicker() {
               key={p.id}
               type="button"
               onClick={() => setValue(p.id)}
-              className={`focus-ring relative flex flex-col items-center gap-1 rounded-lg border px-2 py-2.5 transition ${
+              className={`focus-ring relative flex flex-col items-center gap-1 overflow-hidden rounded-lg border px-2 py-2.5 transition-colors ${
                 selected
                   ? 'border-forest bg-forest text-paper-soft shadow-[0_2px_0_var(--color-forest-deep)]'
-                  : 'border-ink/15 bg-paper-soft/50 text-ink-soft hover:border-ink/30 hover:bg-paper-soft'
+                  : 'ink-wash border-ink/15 bg-paper-soft/50 text-ink-soft'
               }`}
             >
               <span

@@ -47,6 +47,10 @@ export const SURFACE_ORDER: SurfaceCategory[] = [
   'unknown',
 ]
 
+export function surfaceLabel(surface: string | null | undefined): string {
+  return SURFACE_META[classifySurface(surface)].label
+}
+
 export function classifySurface(surface: string | null | undefined): SurfaceCategory {
   if (!surface) return 'unknown'
   const s = surface.toLowerCase()

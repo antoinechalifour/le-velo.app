@@ -31,7 +31,7 @@ export function PeekBar({ status }: { status: PeekStatus }) {
         <PeekText status={status} />
         <ChevronDown
           size={20}
-          className={`shrink-0 text-sepia transition-transform duration-300 ${
+          className={`shrink-0 text-sepia transition-transform ${
             open ? '' : 'rotate-180'
           }`}
           aria-hidden="true"

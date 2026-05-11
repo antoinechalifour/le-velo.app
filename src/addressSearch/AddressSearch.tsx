@@ -97,9 +97,8 @@ export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
                   e.preventDefault()
                   pick(r)
                 }}
-                className={`block w-full border-b border-ink/8 px-3.5 py-2.5 text-left text-xs last:border-b-0 ${
-                  active ? 'bg-rust/8' : 'hover:bg-paper-deep/40'
-                }`}
+                data-active={active}
+                className="ink-wash block w-full border-b border-ink/8 px-3.5 py-2.5 text-left text-xs last:border-b-0"
               >
                 <div className="truncate text-[0.85rem] font-medium text-ink">
                   {r.shortLabel}

@@ -1,13 +1,23 @@
 import { useMemo } from 'react'
-import { useAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AreaChart } from '../charts/AreaChart'
 import { formatDistance, formatElevation } from '../format/format'
 import type { ElevationPoint } from '../route/elevation'
 import { pointAtDistance } from '../route/elevation'
+import type { Segment } from '../route/segments'
+import { highlightedSegmentIdxAtom } from '../state/highlight'
 import { profileHoverAtom } from '../state/hover'
 
-export function ElevationChart({ profile }: { profile: ElevationPoint[] }) {
+export function ElevationChart({
+  profile,
+  segments,
+}: {
+  profile: ElevationPoint[]
+  segments?: Segment[]
+}) {
   const [hover, setHover] = useAtom(profileHoverAtom)
+  const highlightedSegmentIdx = useAtomValue(highlightedSegmentIdxAtom)
+  const setHighlightedSegmentIdx = useSetAtom(highlightedSegmentIdxAtom)
 
   const xyPoints = useMemo(
     () => profile.map((p) => ({ x: p.distanceM, y: p.elevationM })),
@@ -16,17 +26,28 @@ export function ElevationChart({ profile }: { profile: ElevationPoint[] }) {
 
   if (profile.length < 2) return null
 
-  const hoveredX = hover?.distanceM ?? null
+  const segmentDrivenX =
+    !hover && segments && highlightedSegmentIdx !== null
+      ? segmentMidpointM(segments[highlightedSegmentIdx])
+      : null
+
+  const hoveredX = hover?.distanceM ?? segmentDrivenX
   const hoveredPoint =
     hoveredX !== null ? pointAtDistance(profile, hoveredX) : null
 
   function handleHoverX(x: number | null) {
     if (x === null) {
       setHover(null)
+      setHighlightedSegmentIdx(null)
       return
     }
     const p = pointAtDistance(profile, x)
-    if (p) setHover({ distanceM: p.distanceM, point: p.point })
+    if (!p) return
+    setHover({ distanceM: p.distanceM, point: p.point })
+    if (segments && segments.length > 0) {
+      const idx = findSegmentIdxAt(segments, p.distanceM)
+      setHighlightedSegmentIdx(idx)
+    }
   }
 
   const yRange = (() => {
@@ -67,4 +88,18 @@ export function ElevationChart({ profile }: { profile: ElevationPoint[] }) {
       />
     </div>
   )
+}
+
+function segmentMidpointM(segment: Segment | undefined): number | null {
+  if (!segment) return null
+  return ((segment.startKm + segment.endKm) / 2) * 1000
+}
+
+function findSegmentIdxAt(segments: Segment[], distanceM: number): number | null {
+  const km = distanceM / 1000
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i]
+    if (km >= s.startKm && km <= s.endKm) return i
+  }
+  return null
 }

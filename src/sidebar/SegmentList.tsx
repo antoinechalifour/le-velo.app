@@ -2,6 +2,7 @@ import { useAtom } from 'jotai'
 import { formatDistance } from '../format/format'
 import { CATEGORY_META } from '../route/segmentCategory'
 import type { Segment } from '../route/segments'
+import { surfaceLabel } from '../route/surface'
 import { highlightedSegmentIdxAtom } from '../state/highlight'
 
 export function SegmentList({ segments }: { segments: Segment[] }) {
@@ -35,9 +36,8 @@ export function SegmentList({ segments }: { segments: Segment[] }) {
               key={idx}
               onMouseEnter={() => setHighlightedIdx(idx)}
               onClick={() => setHighlightedIdx(active ? null : idx)}
-              className={`flex cursor-pointer items-center gap-3 border-b border-ink/8 px-4 py-2.5 transition last:border-b-0 ${
-                active ? 'bg-rust/8' : 'hover:bg-paper-deep/40'
-              }`}
+              data-active={active}
+              className="ink-wash flex cursor-pointer items-center gap-3 border-b border-ink/8 px-4 py-2.5 last:border-b-0"
             >
               <span
                 className="h-8 w-1 shrink-0 rounded-sm"
@@ -48,8 +48,7 @@ export function SegmentList({ segments }: { segments: Segment[] }) {
                   {meta.label}
                 </div>
                 <div className="truncate text-[0.72rem] text-sepia">
-                  {[s.primaryHighway, s.surface].filter(Boolean).join(' · ') ||
-                    '—'}
+                  {surfaceLabel(s.surface)}
                 </div>
               </div>
               <div className="numeral text-right">

@@ -1,6 +1,7 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useRoutesQuery } from '../brouter/query'
 import { ElevationChart } from '../elevation/ElevationChart'
+import { useMagnetic } from '../hooks/useMagnetic'
 import { highlightedSegmentIdxAtom } from '../state/highlight'
 import { sheetOpenAtom } from '../state/sheet'
 import {
@@ -50,9 +51,8 @@ export function Sidebar() {
   return (
     <aside
       className={`
-        paper-grain fixed bottom-0 left-0 right-0 z-10 flex h-[85dvh] max-h-[85dvh] flex-col
-        overflow-hidden rounded-t-[1.25rem] shadow-2xl
-        transition-transform duration-300 ease-out
+        paper-grain dur-flow fixed bottom-0 left-0 right-0 z-10 flex h-[85dvh] max-h-[85dvh]
+        flex-col overflow-hidden rounded-t-[1.25rem] shadow-2xl transition-transform
         ${sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-5.5rem)]'}
         md:static md:h-full md:max-h-none md:w-1/3 md:min-w-[26rem] md:max-w-[48rem] md:translate-y-0 md:rounded-none
         md:border-r md:border-ink/12 md:shadow-[6px_0_24px_-12px_rgba(28,25,23,0.18)] md:transition-none
@@ -103,7 +103,10 @@ export function Sidebar() {
               </Section>
               {selectedRoute.elevationProfile.length > 1 && (
                 <Section eyebrow="Profil altimétrique">
-                  <ElevationChart profile={selectedRoute.elevationProfile} />
+                  <ElevationChart
+                    profile={selectedRoute.elevationProfile}
+                    segments={selectedRoute.segments}
+                  />
                 </Section>
               )}
               {selectedRoute.breakdown.length > 0 && (
@@ -124,15 +127,7 @@ export function Sidebar() {
             </>
           )}
 
-          {points.length > 0 && (
-            <button
-              type="button"
-              onClick={handleReset}
-              className="focus-ring eyebrow-tight mt-1 inline-flex items-center justify-center gap-2 self-start rounded-full border border-ink/25 bg-paper-soft px-4 py-2 text-ink-soft transition hover:border-rust hover:bg-rust/8 hover:text-rust"
-            >
-              <span aria-hidden>↺</span> Recommencer
-            </button>
-          )}
+          {points.length > 0 && <ResetButton onClick={handleReset} />}
 
           <footer className="mt-2 border-t border-ink/15 pt-4 text-[11px] leading-relaxed text-sepia-soft">
             <div className="eyebrow-tight mb-1 text-sepia">Colophon</div>
@@ -142,6 +137,25 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+  )
+}
+
+function ResetButton({ onClick }: { onClick: () => void }) {
+  const { ref, onMouseMove, onMouseLeave } = useMagnetic<HTMLButtonElement>({
+    strength: 0.22,
+    max: 5,
+  })
+  return (
+    <button
+      ref={ref}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+      type="button"
+      onClick={onClick}
+      className="focus-ring eyebrow-tight ink-wash mt-1 inline-flex items-center justify-center gap-2 self-start overflow-hidden rounded-full border border-ink/25 bg-paper-soft px-4 py-2 text-ink-soft"
+    >
+      <span aria-hidden>↺</span> Recommencer
+    </button>
   )
 }
 

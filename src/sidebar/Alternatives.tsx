@@ -18,10 +18,10 @@ export function Alternatives({ routes }: { routes: RouteResult[] }) {
             <button
               type="button"
               onClick={() => setSelectedIdx(idx)}
-              className={`focus-ring flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
+              className={`focus-ring flex w-full items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 text-left transition-colors ${
                 selected
                   ? 'border-forest bg-forest/8 shadow-[inset_3px_0_0_var(--color-forest)]'
-                  : 'paper-card hover:border-ink/25'
+                  : 'paper-card ink-wash border-transparent'
               }`}
             >
               <span
