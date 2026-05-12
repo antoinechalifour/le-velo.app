@@ -145,7 +145,7 @@ function ItineraryRow({
         onClick={onLoad}
         className="focus-ring flex flex-1 flex-col items-start gap-0.5 px-4 py-3 text-left hover:bg-paper-deep/30"
       >
-        <span className="display-serif truncate text-[1rem] font-medium leading-tight text-ink">
+        <span className="display-serif line-clamp-1 text-[1rem] font-medium leading-tight text-ink">
           {it.name}
         </span>
         <span className="numeral flex items-center gap-1.5 text-[0.72rem] text-sepia">
@@ -160,7 +160,7 @@ function ItineraryRow({
         type="button"
         onClick={onDelete}
         aria-label="Supprimer"
-        className="focus-ring border-l border-ink/10 px-3 text-sepia hover:bg-burgundy/10 hover:text-burgundy"
+        className="focus-ring shrink-0 border-l border-ink/10 px-3 text-sepia hover:bg-burgundy/10 hover:text-burgundy"
       >
         ✕
       </button>
