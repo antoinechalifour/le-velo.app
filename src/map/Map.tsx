@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Bike, LocateFixed } from 'lucide-react'
+import { Bike, LocateFixed, Navigation2 } from 'lucide-react'
 import {
   Map as MapLibre,
   Marker,
@@ -15,10 +15,12 @@ import type { ExpressionSpecification } from 'maplibre-gl'
 import type { Feature, FeatureCollection, LineString } from 'geojson'
 import { useRoutesQuery } from '../brouter/query'
 import { bboxOf } from '../geo/bbox'
+import { bearingDeg } from '../geo/bearing'
 import type { LngLat } from '../geo/lngLat'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useHaptics } from '../hooks/useHaptics'
 import { useWakeLock } from '../hooks/useWakeLock'
+import { findRouteLookahead } from '../route/lookahead'
 import type { RoutePoint } from '../route/point'
 import { PedalLoader } from './PedalLoader'
 import {
@@ -32,6 +34,7 @@ import { segmentIdxAtDistance } from '../route/segments'
 import { cameraCommandAtom } from '../state/camera'
 import { followModeAtom } from '../state/followMode'
 import { routeHoverAtom } from '../state/hover'
+import { navigationModeAtom } from '../state/navigationMode'
 import { userLocationAtom } from '../state/userLocation'
 import { usePointsParam, useSelectedRouteParam } from '../url/params'
 
@@ -132,6 +135,15 @@ export function Map() {
   useEffect(() => {
     followModeRef.current = followMode
   }, [followMode])
+  const [navigationMode, setNavigationMode] = useAtom(navigationModeAtom)
+  const navigationModeRef = useRef(navigationMode)
+  useEffect(() => {
+    navigationModeRef.current = navigationMode
+  }, [navigationMode])
+  const userLocationRef = useRef(userLocation)
+  useEffect(() => {
+    userLocationRef.current = userLocation
+  }, [userLocation])
   const cursorLngLatRef = useRef<LngLat | null>(null)
 
   const selectedRoute = routes[clampedIdx] ?? null
@@ -181,6 +193,24 @@ export function Map() {
   }, [routes, clampedIdx])
 
   const selectedSegmentsGeoJson = selectedRoute?.segmentsGeoJson ?? null
+
+  const routeCoords = useMemo<[number, number][] | null>(() => {
+    const f = selectedRoute?.geojson?.features?.[0]
+    if (!f || f.geometry?.type !== 'LineString') return null
+    return (f.geometry as LineString).coordinates.map(
+      (c) => [c[0], c[1]] as [number, number],
+    )
+  }, [selectedRoute])
+  const routeCoordsRef = useRef(routeCoords)
+  useEffect(() => {
+    routeCoordsRef.current = routeCoords
+  }, [routeCoords])
+
+  // Auto-désactive le mode navigation quand on perd la route, sinon le pitch
+  // resterait figé sans contexte de tracé à suivre.
+  useEffect(() => {
+    if (!routeCoords && navigationMode) setNavigationMode(false)
+  }, [routeCoords, navigationMode, setNavigationMode])
 
   const handleClick = useCallback(
     (e: MapMouseEvent) => {
@@ -319,11 +349,47 @@ export function Map() {
     if (!userLocation) return
     const map = mapRef.current
     if (!map) return
+    const line = routeCoordsRef.current
+    if (navigationModeRef.current && line) {
+      const lookahead = findRouteLookahead(line, userLocation, 60)
+      if (lookahead) {
+        map.easeTo({
+          center: [userLocation.lng, userLocation.lat],
+          bearing: bearingDeg(userLocation, lookahead),
+          duration: 700,
+        })
+        return
+      }
+    }
     map.easeTo({
       center: [userLocation.lng, userLocation.lat],
       duration: 700,
     })
   }, [userLocation])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    if (navigationMode) {
+      const line = routeCoordsRef.current
+      const loc = userLocationRef.current
+      if (loc && line) {
+        const lookahead = findRouteLookahead(line, loc, 60)
+        if (lookahead) {
+          map.easeTo({
+            center: [loc.lng, loc.lat],
+            bearing: bearingDeg(loc, lookahead),
+            pitch: 55,
+            duration: 900,
+          })
+          return
+        }
+      }
+      map.easeTo({ pitch: 55, duration: 900 })
+    } else {
+      map.easeTo({ pitch: 0, bearing: 0, duration: 900 })
+    }
+  }, [navigationMode])
 
   const handleMoveStart = useCallback(
     (e: ViewStateChangeEvent) => {
@@ -333,6 +399,17 @@ export function Map() {
     },
     [setFollowMode],
   )
+
+  const handleNavigationToggle = useCallback(() => {
+    if (navigationMode) {
+      setNavigationMode(false)
+      haptic('light')
+      return
+    }
+    setNavigationMode(true)
+    haptic('success')
+    if (!followMode) setFollowMode(true)
+  }, [navigationMode, followMode, setNavigationMode, setFollowMode, haptic])
 
   const handleFollowToggle = useCallback(() => {
     if (followMode) {
@@ -533,6 +610,12 @@ export function Map() {
       {userLocation && (
         <FollowButton active={followMode} onClick={handleFollowToggle} />
       )}
+      {userLocation && routeCoords && (
+        <NavigationButton
+          active={navigationMode}
+          onClick={handleNavigationToggle}
+        />
+      )}
       <RouteLoaderOverlay visible={showLoader} />
     </div>
   )
@@ -676,6 +759,61 @@ function FollowButton({
           `}
         >
           <LocateFixed size={18} strokeWidth={2.25} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function NavigationButton({
+  active,
+  onClick,
+}: {
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <div className="pointer-events-none absolute right-4 bottom-[10.5rem] z-10 flex items-center md:right-6 md:bottom-[5rem]">
+      {active && (
+        <span
+          aria-hidden
+          className="eyebrow-tight mr-2 hidden whitespace-nowrap rounded-sm px-2 py-[3px] sm:inline-block"
+          style={{
+            fontSize: '0.6rem',
+            letterSpacing: '0.2em',
+            color: 'var(--color-forest-deep)',
+            backgroundColor: 'var(--color-paper-soft)',
+            border: '1px solid var(--color-forest)',
+            boxShadow:
+              '0 2px 4px -1px rgba(28,25,23,0.30), inset 0 0 0 1px rgba(251,246,233,0.65)',
+          }}
+        >
+          Cap suivi
+        </span>
+      )}
+      <div className="pointer-events-auto relative">
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={
+            active
+              ? 'Désactiver la vue en perspective'
+              : 'Activer la vue en perspective alignée sur le tracé'
+          }
+          aria-pressed={active}
+          title={active ? 'Cap suivi' : 'Aligner la caméra sur le tracé'}
+          className={`
+            focus-ring relative flex h-11 w-11 items-center justify-center
+            rounded-full shadow-[0_3px_6px_-1px_rgba(28,25,23,0.45)]
+            transition-colors duration-300
+            ${
+              active
+                ? 'bg-forest text-paper-soft ring-[3px] ring-paper-soft'
+                : 'border border-ink/20 bg-paper-soft text-sepia hover:text-ink'
+            }
+          `}
+        >
+          <Navigation2 size={18} strokeWidth={2.25} />
         </button>
       </div>
     </div>
