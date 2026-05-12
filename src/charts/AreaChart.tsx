@@ -1,4 +1,5 @@
 import { useMemo, useRef } from 'react'
+import { useTouchScrubX } from '../hooks/useTouchScrubX'
 import {
   buildPaths,
   buildScales,
@@ -46,17 +47,12 @@ export function AreaChart({
     return { scales, paths }
   }, [points, viewport])
 
-  if (points.length < 2) return null
-
   const plotW = viewport.width - viewport.padLeft - viewport.padRight
   const plotH = viewport.height - viewport.padTop - viewport.padBottom
 
-  function handleMove(e: React.MouseEvent<SVGSVGElement>) {
-    const svg = svgRef.current
-    if (!svg) return
-    const rect = svg.getBoundingClientRect()
-    const xPx = e.clientX - rect.left
-    const xView = (xPx / rect.width) * viewport.width
+  function setHoverFromT(tFull: number) {
+    if (points.length < 2) return
+    const xView = tFull * viewport.width
     const t = (xView - viewport.padLeft) / plotW
     if (t < 0 || t > 1) {
       onHoverX(null)
@@ -67,6 +63,20 @@ export function AreaChart({
     const idx = nearestXIdx(points, xValue)
     onHoverX(points[idx].x)
   }
+
+  function handleMove(e: React.MouseEvent<SVGSVGElement>) {
+    const svg = svgRef.current
+    if (!svg) return
+    const rect = svg.getBoundingClientRect()
+    setHoverFromT((e.clientX - rect.left) / rect.width)
+  }
+
+  const touchHandlers = useTouchScrubX<SVGSVGElement>({
+    onScrub: setHoverFromT,
+    onEnd: () => onHoverX(null),
+  })
+
+  if (points.length < 2) return null
 
   let hoverElement: React.ReactNode = null
   if (hoveredX !== null) {
@@ -94,10 +104,11 @@ export function AreaChart({
     <svg
       ref={svgRef}
       viewBox={`0 0 ${viewport.width} ${viewport.height}`}
-      className={className}
+      className={`touch-none ${className}`}
       onMouseMove={handleMove}
       onMouseLeave={() => onHoverX(null)}
       preserveAspectRatio="none"
+      {...touchHandlers}
     >
       <line
         x1={viewport.padLeft}

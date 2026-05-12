@@ -1,5 +1,6 @@
 import { useAtom } from 'jotai'
 import { formatDistance } from '../format/format'
+import { useHaptics } from '../hooks/useHaptics'
 import { CATEGORY_META } from '../route/segmentCategory'
 import {
   segmentIdxAtDistance,
@@ -11,8 +12,17 @@ import { routeHoverAtom } from '../state/hover'
 
 export function SegmentList({ segments }: { segments: Segment[] }) {
   const [hover, setHover] = useAtom(routeHoverAtom)
+  const haptic = useHaptics()
   const activeIdx =
     hover !== null ? segmentIdxAtDistance(segments, hover.distanceM) : null
+
+  function selectSegment(s: Segment) {
+    const { distanceM, point } = segmentMidpoint(s)
+    setHover({
+      distanceM,
+      point: { lng: point[0], lat: point[1] },
+    })
+  }
 
   return (
     <details className="paper-card group overflow-hidden rounded-xl">
@@ -40,12 +50,10 @@ export function SegmentList({ segments }: { segments: Segment[] }) {
           return (
             <li
               key={idx}
-              onMouseEnter={() => {
-                const { distanceM, point } = segmentMidpoint(s)
-                setHover({
-                  distanceM,
-                  point: { lng: point[0], lat: point[1] },
-                })
+              onMouseEnter={() => selectSegment(s)}
+              onClick={() => {
+                haptic('selection')
+                selectSegment(s)
               }}
               data-active={active}
               className="ink-wash flex cursor-pointer items-center gap-3 border-b border-ink/8 px-4 py-2.5 last:border-b-0"

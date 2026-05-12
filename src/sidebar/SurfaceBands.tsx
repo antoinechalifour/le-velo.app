@@ -1,5 +1,6 @@
 import { useAtom } from 'jotai'
 import { formatDistance } from '../format/format'
+import { useTouchScrubX } from '../hooks/useTouchScrubX'
 import { pointAtDistance, type ElevationPoint } from '../route/elevation'
 import { SURFACE_META, SURFACE_ORDER } from '../route/surface'
 import {
@@ -17,9 +18,28 @@ export function SurfaceBands({
   profile: ElevationPoint[]
 }) {
   const [hover, setHover] = useAtom(routeHoverAtom)
-  if (bands.length === 0) return null
-  const total = bands[bands.length - 1].endM
-  if (total <= 0) return null
+  const total = bands.length > 0 ? bands[bands.length - 1].endM : 0
+
+  function setHoverAtT(t: number) {
+    if (total <= 0) return
+    const distanceM = Math.max(0, Math.min(1, t)) * total
+    const p = pointAtDistance(profile, distanceM)
+    if (!p) return
+    setHover({ distanceM: p.distanceM, point: p.point })
+  }
+
+  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setHoverAtT((e.clientX - rect.left) / rect.width)
+  }
+
+  const touchHandlers = useTouchScrubX<HTMLDivElement>({
+    onScrub: setHoverAtT,
+    onEnd: () => setHover(null),
+    getTick: (t) => bandIdxAtDistance(bands, t * total),
+  })
+
+  if (bands.length === 0 || total <= 0) return null
 
   const totals = surfaceTotals(bands)
   const legend = SURFACE_ORDER.filter((c) => (totals[c] ?? 0) > 0)
@@ -30,16 +50,6 @@ export function SurfaceBands({
       ? Math.max(0, Math.min(1, hover.distanceM / total)) * 100
       : null
   const activeBand = activeIdx !== null ? bands[activeIdx] : null
-
-  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const t = (e.clientX - rect.left) / rect.width
-    const clamped = Math.max(0, Math.min(1, t))
-    const distanceM = clamped * total
-    const p = pointAtDistance(profile, distanceM)
-    if (!p) return
-    setHover({ distanceM: p.distanceM, point: p.point })
-  }
 
   return (
     <div className="paper-card rounded-xl p-4">
@@ -59,16 +69,17 @@ export function SurfaceBands({
             </span>
           </span>
         ) : (
-          <span className="text-[0.78rem] italic text-sepia-soft">
+          <span className="text-[0.78rem] text-ink">
             survol pour détailler
           </span>
         )}
         <span className="eyebrow-tight text-sepia-soft">Revêtement</span>
       </div>
       <div
-        className="relative h-4 w-full cursor-crosshair overflow-hidden rounded-full border border-ink/15 bg-paper-deep"
+        className="relative h-4 w-full cursor-crosshair touch-none overflow-hidden rounded-full border border-ink/15 bg-paper-deep"
         onMouseMove={handleMove}
         onMouseLeave={() => setHover(null)}
+        {...touchHandlers}
       >
         <div className="flex h-full w-full">
           {bands.map((b, idx) => {

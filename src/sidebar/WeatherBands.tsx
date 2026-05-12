@@ -3,6 +3,7 @@ import { ArrowUp } from 'lucide-react'
 import { useMemo } from 'react'
 import { Logo } from './Logo'
 import { formatDistance, formatDuration } from '../format/format'
+import { useTouchScrubX } from '../hooks/useTouchScrubX'
 import { pointAtDistance, type ElevationPoint } from '../route/elevation'
 import type { RouteResult } from '../route/route'
 import { routeHoverAtom } from '../state/hover'
@@ -58,6 +59,26 @@ function WeatherFrise({
   const [hover, setHover] = useAtom(routeHoverAtom)
   const last = profile[profile.length - 1]
   const total = last?.distanceM ?? 0
+
+  function setHoverAtT(t: number) {
+    if (total <= 0) return
+    const distanceM = Math.max(0, Math.min(1, t)) * total
+    const p = pointAtDistance(profile, distanceM)
+    if (!p) return
+    setHover({ distanceM: p.distanceM, point: p.point })
+  }
+
+  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setHoverAtT((e.clientX - rect.left) / rect.width)
+  }
+
+  const touchHandlers = useTouchScrubX<HTMLDivElement>({
+    onScrub: setHoverAtT,
+    onEnd: () => setHover(null),
+    getTick: (t) => bandIdxAtDistance(weather.length, total, t * total),
+  })
+
   if (weather.length === 0 || total <= 0) return null
 
   const activeIdx =
@@ -67,16 +88,6 @@ function WeatherFrise({
     hover !== null
       ? Math.max(0, Math.min(1, hover.distanceM / total)) * 100
       : null
-
-  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const t = (e.clientX - rect.left) / rect.width
-    const clamped = Math.max(0, Math.min(1, t))
-    const distanceM = clamped * total
-    const p = pointAtDistance(profile, distanceM)
-    if (!p) return
-    setHover({ distanceM: p.distanceM, point: p.point })
-  }
 
   const cellWidthPct = 100 / weather.length
 
@@ -96,7 +107,7 @@ function WeatherFrise({
             </span>
           </span>
         ) : (
-          <span className="text-[0.78rem] italic text-sepia-soft">
+          <span className="text-[0.78rem] text-ink">
             survol pour détailler
           </span>
         )}
@@ -104,9 +115,10 @@ function WeatherFrise({
       </div>
 
       <div
-        className="relative cursor-crosshair"
+        className="relative cursor-crosshair touch-none"
         onMouseMove={handleMove}
         onMouseLeave={() => setHover(null)}
+        {...touchHandlers}
       >
         <div className="relative flex h-[5.25rem] w-full overflow-hidden rounded-lg border border-ink/15">
           {weather.map((w, i) => {
