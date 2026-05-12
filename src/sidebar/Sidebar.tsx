@@ -19,6 +19,7 @@ import { SegmentList } from './SegmentList'
 import { Stats } from './Stats'
 import { SurfaceBands } from './SurfaceBands'
 import { useAutoOpenSheet } from './useAutoOpenSheet'
+import { WeatherBands } from './WeatherBands'
 
 export function Sidebar() {
   const [points, setPoints] = usePointsParam()
@@ -106,6 +107,9 @@ export function Sidebar() {
                   <ElevationChart profile={selectedRoute.elevationProfile} />
                 </Section>
               )}
+              <Section eyebrow="Bulletin météo en chemin">
+                <WeatherBands route={selectedRoute} />
+              </Section>
               {selectedRoute.breakdown.length > 0 && (
                 <Section eyebrow="Composition des voies">
                   <Composition breakdown={selectedRoute.breakdown} />
