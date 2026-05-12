@@ -1,20 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
+import { ArrowDownToLine } from 'lucide-react'
 import {
   formatDistance,
   formatDuration,
   formatElevation,
 } from '../format/format'
 import { Ticker } from '../format/Ticker'
+import { SaveButton } from '../itineraries/SaveButton'
 import { nominatimReverseQueryOptions } from '../nominatim/query'
 import type { RoutePoint } from '../route/point'
 import type { RouteResult } from '../route/route'
-import { usePointsParam } from '../url/params'
+import { usePointsParam, useProfileParam } from '../url/params'
 
 export function Stats({ route }: { route: RouteResult }) {
   const { distanceKm, durationMin, ascentM, descentM } = route.stats
   const showSpeed = durationMin > 0 && distanceKm > 0
   const kmh = showSpeed ? distanceKm / (durationMin / 60) : 0
   const [points] = usePointsParam()
+  const [profile] = useProfileParam()
   const startName = useEndpointName(points[0])
   const endName = useEndpointName(points[points.length - 1])
   return (
@@ -67,6 +70,14 @@ export function Stats({ route }: { route: RouteResult }) {
         </div>
       )}
 
+      <SaveButton
+        points={points}
+        profile={profile}
+        route={route}
+        startName={startName}
+        endName={endName}
+      />
+
       <button
         type="button"
         onClick={() =>
@@ -80,9 +91,9 @@ export function Stats({ route }: { route: RouteResult }) {
         <span className="flex items-center gap-3">
           <span
             aria-hidden
-            className="numeral inline-flex h-7 w-7 items-center justify-center rounded-full border border-paper-soft/40 text-xs"
+            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-paper-soft/40"
           >
-            ↓
+            <ArrowDownToLine size={14} />
           </span>
           <span className="eyebrow-tight text-paper-soft">
             Télécharger le GPX

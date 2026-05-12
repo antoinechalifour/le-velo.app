@@ -3,6 +3,7 @@ import { useRoutesQuery } from '../brouter/query'
 import { ElevationChart } from '../elevation/ElevationChart'
 import { useHaptics } from '../hooks/useHaptics'
 import { useMagnetic } from '../hooks/useMagnetic'
+import { SavedItineraries } from '../itineraries/SavedItineraries'
 import { routeHoverAtom } from '../state/hover'
 import { sheetOpenAtom } from '../state/sheet'
 import {
@@ -133,6 +134,10 @@ export function Sidebar() {
           )}
 
           {points.length > 0 && <ResetButton onClick={handleReset} />}
+
+          <Section eyebrow="Mes itinéraires">
+            <SavedItineraries />
+          </Section>
 
           <footer className="mt-2 border-t border-ink/15 pt-4 text-[11px] leading-relaxed text-sepia-soft">
             <div className="eyebrow-tight mb-1 text-sepia">Colophon</div>
