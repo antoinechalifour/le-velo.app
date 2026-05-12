@@ -57,8 +57,8 @@ export function Sidebar() {
         paper-grain dur-flow fixed bottom-0 left-0 right-0 z-10 flex h-[85dvh] max-h-[85dvh]
         flex-col overflow-hidden rounded-t-[1.25rem] shadow-2xl transition-transform
         ${sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%-5.5rem)]'}
-        md:static md:h-full md:max-h-none md:w-1/3 md:min-w-[26rem] md:max-w-[48rem] md:translate-y-0 md:rounded-none
-        md:border-r md:border-ink/12 md:shadow-[6px_0_24px_-12px_rgba(28,25,23,0.18)] md:transition-none
+        md:static md:h-full md:max-h-none md:w-1/3 md:min-w-[26rem] md:max-w-[48rem] md:translate-y-0
+        md:rounded-2xl md:shadow-[-12px_0_28px_-8px_rgba(28,25,23,0.22),12px_0_28px_-8px_rgba(28,25,23,0.22),0_-6px_18px_rgba(255,253,247,0.8),0_8px_20px_-6px_rgba(28,25,23,0.15),inset_1px_1px_2px_rgba(255,255,255,0.7)] md:transition-none
       `}
     >
       <PeekBar status={peekStatus} />
