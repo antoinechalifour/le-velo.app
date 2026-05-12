@@ -75,7 +75,7 @@ export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
         autoComplete="off"
-        className="focus-ring w-full rounded-lg border border-ink/20 bg-paper-soft px-3.5 py-2.5 text-sm font-medium text-ink placeholder:font-normal placeholder:italic placeholder:text-sepia-soft focus:border-rust focus:outline-none"
+        className="focus-ring w-full rounded-lg border border-ink/20 bg-paper-soft px-3.5 py-2.5 text-base font-medium text-ink placeholder:font-normal placeholder:italic placeholder:text-sepia-soft focus:border-rust focus:outline-none md:text-sm"
       />
       {showDropdown && (
         <div className="paper-card scroll-soft absolute left-0 right-0 top-full z-20 mt-1.5 max-h-72 overflow-y-auto rounded-lg shadow-xl">
