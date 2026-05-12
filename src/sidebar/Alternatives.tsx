@@ -1,9 +1,11 @@
 import { formatDistance, formatDuration, formatElevation } from '../format/format'
+import { useHaptics } from '../hooks/useHaptics'
 import type { RouteResult } from '../route/route'
 import { useSelectedRouteParam } from '../url/params'
 
 export function Alternatives({ routes }: { routes: RouteResult[] }) {
   const [selectedIdx, setSelectedIdx] = useSelectedRouteParam()
+  const haptic = useHaptics()
   const clamped =
     routes.length > 0
       ? Math.min(Math.max(selectedIdx, 0), routes.length - 1)
@@ -17,7 +19,10 @@ export function Alternatives({ routes }: { routes: RouteResult[] }) {
           <li key={idx}>
             <button
               type="button"
-              onClick={() => setSelectedIdx(idx)}
+              onClick={() => {
+                if (idx !== clamped) haptic('selection')
+                setSelectedIdx(idx)
+              }}
               className={`focus-ring flex w-full items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 text-left transition-colors ${
                 selected
                   ? 'border-forest bg-forest/8 shadow-[inset_3px_0_0_var(--color-forest)]'

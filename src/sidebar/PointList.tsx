@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { GripVertical, LocateFixed, X } from 'lucide-react'
 import { AddressSearch } from '../addressSearch/AddressSearch'
 import type { LngLat } from '../geo/lngLat'
+import { useHaptics } from '../hooks/useHaptics'
 import { nominatimReverseQueryOptions } from '../nominatim/query'
 import { pointRole, ROLE_META, roleLetter } from '../route/pointRole'
 import type { RoutePoint } from '../route/point'
@@ -36,6 +37,7 @@ export function PointList() {
   const [points, setPoints] = usePointsParam()
   const pushCamera = useSetAtom(pushCameraCommandAtom)
   const userLocation = useAtomValue(userLocationAtom)
+  const haptic = useHaptics()
 
   const drag = useDragReorder((from, to) => {
     setPoints((prev) => {
@@ -47,6 +49,7 @@ export function PointList() {
       next.splice(to, 0, moved)
       return next
     })
+    if (from !== to) haptic('success')
   })
 
   function handleAdd(point: LngLat, label: string | null) {
@@ -57,10 +60,12 @@ export function PointList() {
   function handleAddMyLocation() {
     if (!userLocation) return
     handleAdd(userLocation, null)
+    haptic('success')
   }
 
   function handleRemove(idx: number) {
     setPoints((prev) => prev.filter((_, i) => i !== idx))
+    haptic('light')
   }
 
   return (

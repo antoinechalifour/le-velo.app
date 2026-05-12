@@ -1,8 +1,10 @@
+import { useHaptics } from '../hooks/useHaptics'
 import { PROFILES } from '../route/profile'
 import { useProfileParam } from '../url/params'
 
 export function ProfilePicker() {
   const [value, setValue] = useProfileParam()
+  const haptic = useHaptics()
   const active = PROFILES.find((p) => p.id === value)
 
   return (
@@ -14,7 +16,10 @@ export function ProfilePicker() {
             <button
               key={p.id}
               type="button"
-              onClick={() => setValue(p.id)}
+              onClick={() => {
+                if (p.id !== value) haptic('selection')
+                setValue(p.id)
+              }}
               className={`focus-ring relative flex flex-col items-center gap-1 overflow-hidden rounded-lg border px-2 py-2.5 transition-colors ${
                 selected
                   ? 'border-forest bg-forest text-paper-soft shadow-[0_2px_0_var(--color-forest-deep)]'

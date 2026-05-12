@@ -3,9 +3,12 @@ import {
   ChevronDown,
   MapPin,
   MoveUpRight,
+  TrendingDown,
+  TrendingUp,
   TriangleAlert,
 } from 'lucide-react'
 import { formatDistance, formatDuration, formatElevation } from '../format/format'
+import { useHaptics } from '../hooks/useHaptics'
 import { sheetOpenAtom } from '../state/sheet'
 import { Logo } from './Logo'
 import type { PeekStatus } from './peekStatus'
@@ -14,11 +17,15 @@ const PEEK_HEIGHT = '5.5rem'
 
 export function PeekBar({ status }: { status: PeekStatus }) {
   const [open, setOpen] = useAtom(sheetOpenAtom)
+  const haptic = useHaptics()
 
   return (
     <button
       type="button"
-      onClick={() => setOpen((o) => !o)}
+      onClick={() => {
+        setOpen((o) => !o)
+        haptic('soft')
+      }}
       aria-label={open ? 'Fermer le panneau' : 'Ouvrir le panneau'}
       className="flex shrink-0 flex-col items-stretch border-b border-ink/15 bg-paper-soft md:hidden"
       style={{ height: PEEK_HEIGHT }}
@@ -82,9 +89,12 @@ function PeekText({ status }: { status: PeekStatus }) {
           <span className="mx-1.5 text-sepia-soft">·</span>
           {formatDuration(r.stats.durationMin)}
         </div>
-        <div className="numeral truncate text-[0.72rem] text-sepia">
-          ↗ {formatElevation(r.stats.ascentM)}
-          <span className="mx-1.5">·</span>↘ {formatElevation(r.stats.descentM)}
+        <div className="numeral flex items-center gap-1 truncate text-[0.72rem] text-sepia">
+          <TrendingUp size={12} aria-hidden="true" className="shrink-0" />
+          {formatElevation(r.stats.ascentM)}
+          <span className="mx-0.5">·</span>
+          <TrendingDown size={12} aria-hidden="true" className="shrink-0" />
+          {formatElevation(r.stats.descentM)}
         </div>
       </div>
     )

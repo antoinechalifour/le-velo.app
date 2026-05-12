@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { LngLat } from '../geo/lngLat'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { useHaptics } from '../hooks/useHaptics'
 import type { NominatimResult } from '../nominatim/client'
 import { nominatimSearchQueryOptions } from '../nominatim/query'
 
@@ -17,6 +18,7 @@ export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
   const [activeIdx, setActiveIdx] = useState(-1)
   const inputId = useId()
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const haptic = useHaptics()
 
   const debouncedQuery = useDebouncedValue(query, 300)
   const { data: results = [], isFetching } = useQuery(
@@ -29,6 +31,7 @@ export function AddressSearch({ placeholder, onSelect }: AddressSearchProps) {
     onSelect(r.point, r.shortLabel)
     setQuery('')
     setOpen(false)
+    haptic('selection')
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {

@@ -17,6 +17,7 @@ import { useRoutesQuery } from '../brouter/query'
 import { bboxOf } from '../geo/bbox'
 import type { LngLat } from '../geo/lngLat'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { useHaptics } from '../hooks/useHaptics'
 import { useWakeLock } from '../hooks/useWakeLock'
 import type { RoutePoint } from '../route/point'
 import { PedalLoader } from './PedalLoader'
@@ -120,6 +121,7 @@ export function Map() {
       ? Math.min(Math.max(selectedRouteIdx, 0), routes.length - 1)
       : 0
 
+  const haptic = useHaptics()
   const [hover, setHover] = useAtom(routeHoverAtom)
   const cameraCommand = useAtomValue(cameraCommandAtom)
   const userLocation = useAtomValue(userLocationAtom)
@@ -188,6 +190,7 @@ export function Map() {
         const idx = altFeature.properties?.routeIdx
         if (typeof idx === 'number') {
           setSelectedRouteIdx(idx)
+          haptic('selection')
           return
         }
       }
@@ -200,8 +203,9 @@ export function Map() {
         ...prev,
         { point: { lng: e.lngLat.lng, lat: e.lngLat.lat }, label: null },
       ])
+      haptic('light')
     },
-    [setPoints, setSelectedRouteIdx],
+    [setPoints, setSelectedRouteIdx, haptic],
   )
 
   const handleTouchStart = useCallback(
@@ -226,10 +230,10 @@ export function Map() {
           ...prev,
           { point: { lng: start.lng, lat: start.lat }, label: null },
         ])
-        if (typeof navigator.vibrate === 'function') navigator.vibrate(20)
+        haptic('heavy')
       }, 500)
     },
-    [clearLongPress, setPoints],
+    [clearLongPress, setPoints, haptic],
   )
 
   const handleTouchMove = useCallback((e: MapLayerTouchEvent) => {
@@ -333,9 +337,11 @@ export function Map() {
   const handleFollowToggle = useCallback(() => {
     if (followMode) {
       setFollowMode(false)
+      haptic('light')
       return
     }
     setFollowMode(true)
+    haptic('success')
     if (!userLocation) return
     const map = mapRef.current
     if (!map) return
@@ -345,7 +351,7 @@ export function Map() {
       zoom: Math.max(currentZoom, 15),
       duration: 900,
     })
-  }, [followMode, userLocation, setFollowMode])
+  }, [followMode, userLocation, setFollowMode, haptic])
 
   useEffect(() => {
     if (!cameraCommand) return
