@@ -1,6 +1,7 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useRoutesQuery } from '../brouter/query'
 import { ElevationChart } from '../elevation/ElevationChart'
+import { useHaptics } from '../hooks/useHaptics'
 import { useMagnetic } from '../hooks/useMagnetic'
 import { routeHoverAtom } from '../state/hover'
 import { sheetOpenAtom } from '../state/sheet'
@@ -149,13 +150,17 @@ function ResetButton({ onClick }: { onClick: () => void }) {
     strength: 0.22,
     max: 5,
   })
+  const haptic = useHaptics()
   return (
     <button
       ref={ref}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
       type="button"
-      onClick={onClick}
+      onClick={() => {
+        haptic('warning')
+        onClick()
+      }}
       className="focus-ring eyebrow-tight ink-wash mt-1 inline-flex items-center justify-center gap-2 self-start overflow-hidden rounded-full border border-ink/25 bg-paper-soft px-4 py-2 text-ink-soft"
     >
       <span aria-hidden>↺</span> Recommencer
