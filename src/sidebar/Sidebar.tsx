@@ -197,7 +197,7 @@ function BrandHeader() {
         <span className="eyebrow text-sepia">Édition Française</span>
         <span className="h-px flex-1 bg-ink/25" />
       </div>
-      <p className="mt-3 max-w-[36ch] text-[0.82rem] leading-relaxed text-sepia">
+      <p className="mt-3 text-[0.82rem] leading-relaxed text-sepia">
         Tracés qui suivent les voies cyclables référencées par
         OpenStreetMap — moteur{' '}
         <span className="italic text-ink-soft">BRouter</span>, export GPX,
