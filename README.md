@@ -9,7 +9,7 @@ Voir [`CADRAGE.md`](./CADRAGE.md) pour le contexte, l'analyse de [cycle.travel](
 ## Fonctionnalités
 
 - Calcul d'itinéraire A → B → … avec waypoints multiples et drag-to-reorder.
-- 4 profils de routage : **Route** (vélo route), **Mixte** (par défaut), **Tranquille** (préfère pistes et routes calmes) et **Court**.
+- 4 profils de routage : **Route** (vélo route), **Mixte** (par défaut), **Confort** (préfère pistes et routes calmes) et **Court**.
 - Jusqu'à 3 alternatives renvoyées par BRouter, sélectionnables sur la carte.
 - Profil altimétrique synchronisé avec le survol de la carte.
 - Bandes de surface (revêtement, type de voie) pour visualiser la qualité du parcours.

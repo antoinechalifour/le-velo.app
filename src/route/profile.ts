@@ -19,7 +19,7 @@ export const PROFILES: ProfileMeta[] = [
   },
   {
     id: 'safety',
-    label: 'Tranquille',
+    label: 'Confort',
     hint: 'Minimise le trafic motorisé. Préfère pistes cyclables et routes calmes, quitte à rallonger.',
   },
   {
