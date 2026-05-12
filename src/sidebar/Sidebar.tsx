@@ -6,12 +6,14 @@ import { useMagnetic } from '../hooks/useMagnetic'
 import { routeHoverAtom } from '../state/hover'
 import { sheetOpenAtom } from '../state/sheet'
 import {
+  useMinDistanceParam,
   usePointsParam,
   useSelectedRouteParam,
 } from '../url/params'
 import { Alternatives } from './Alternatives'
 import { Composition } from './Composition'
 import { Logo } from './Logo'
+import { MinDistance } from './MinDistance'
 import { PeekBar } from './PeekBar'
 import { computePeekStatus } from './peekStatus'
 import { PointList } from './PointList'
@@ -44,10 +46,13 @@ export function Sidebar() {
     (error as Error | null) ?? null,
   )
 
+  const [, setMinDistance] = useMinDistanceParam()
+
   function handleReset() {
     setPoints([])
     setSelectedRouteIdx(0)
     setHover(null)
+    setMinDistance(0)
   }
 
   return (
@@ -76,6 +81,10 @@ export function Sidebar() {
             <PointList />
           </Section>
 
+          <Section eyebrow="Nº 03 · Distance minimum">
+            <MinDistance />
+          </Section>
+
           {isFetching && (
             <div className="paper-card flex items-center gap-3 rounded-lg px-4 py-3 text-sm">
               <Logo spinning className="h-5 w-5 text-forest" />
@@ -93,7 +102,7 @@ export function Sidebar() {
           )}
 
           {routes.length > 1 && (
-            <Section eyebrow="Nº 03 · Variantes">
+            <Section eyebrow="Nº 04 · Variantes">
               <Alternatives routes={routes} />
             </Section>
           )}

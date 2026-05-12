@@ -1,4 +1,4 @@
-import { parseAsInteger, parseAsStringEnum, useQueryState } from 'nuqs'
+import { parseAsFloat, parseAsInteger, parseAsStringEnum, useQueryState } from 'nuqs'
 import { parseAsRoutePoints } from '../route/point'
 import { PROFILE_IDS, type RoutingProfile } from '../route/profile'
 
@@ -7,6 +7,7 @@ const profileParser = parseAsStringEnum<RoutingProfile>(PROFILE_IDS).withDefault
   'trekking',
 )
 const selectedRouteParser = parseAsInteger.withDefault(0)
+const minDistanceParser = parseAsFloat.withDefault(0)
 
 export function usePointsParam() {
   return useQueryState('pts', pointsParser)
@@ -18,4 +19,8 @@ export function useProfileParam() {
 
 export function useSelectedRouteParam() {
   return useQueryState('alt', selectedRouteParser)
+}
+
+export function useMinDistanceParam() {
+  return useQueryState('min', minDistanceParser)
 }
