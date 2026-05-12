@@ -17,6 +17,7 @@ import { useRoutesQuery } from '../brouter/query'
 import { bboxOf } from '../geo/bbox'
 import type { LngLat } from '../geo/lngLat'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { useWakeLock } from '../hooks/useWakeLock'
 import type { RoutePoint } from '../route/point'
 import { PedalLoader } from './PedalLoader'
 import {
@@ -124,6 +125,7 @@ export function Map() {
   const userLocation = useAtomValue(userLocationAtom)
   const setUserLocation = useSetAtom(userLocationAtom)
   const [followMode, setFollowMode] = useAtom(followModeAtom)
+  useWakeLock(followMode)
   const followModeRef = useRef(followMode)
   useEffect(() => {
     followModeRef.current = followMode
