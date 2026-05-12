@@ -65,6 +65,7 @@ export function ElevationChart({ profile }: { profile: ElevationPoint[] }) {
         lineColor="#b8501a"
         areaColor="#b8501a"
         xAxisLabel={(distanceM) => formatDistance(distanceM / 1000)}
+        getTick={(distanceM) => Math.floor(distanceM / 1000)}
       />
     </div>
   )

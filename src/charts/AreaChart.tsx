@@ -17,6 +17,7 @@ type AreaChartProps = {
   className?: string
   xAxisLabel?: (x: number) => string
   yAxisLabel?: (y: number) => string
+  getTick?: (x: number) => string | number | null
 }
 
 const DEFAULT_VIEWPORT: ChartViewport = {
@@ -37,6 +38,7 @@ export function AreaChart({
   className = 'block h-36 w-full',
   xAxisLabel,
   yAxisLabel = (y) => String(Math.round(y)),
+  getTick,
 }: AreaChartProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const viewport = DEFAULT_VIEWPORT
@@ -74,6 +76,16 @@ export function AreaChart({
   const touchHandlers = useTouchScrubX<SVGSVGElement>({
     onScrub: setHoverFromT,
     onEnd: () => onHoverX(null),
+    getTick: getTick
+      ? (tFull) => {
+          if (points.length < 2) return null
+          const xView = tFull * viewport.width
+          const t = (xView - viewport.padLeft) / plotW
+          if (t < 0 || t > 1) return null
+          const xSpan = scales.xMax - scales.xMin
+          return getTick(scales.xMin + t * xSpan)
+        }
+      : undefined,
   })
 
   if (points.length < 2) return null
